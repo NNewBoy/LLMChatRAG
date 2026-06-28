@@ -13,7 +13,9 @@
           <el-radio-button label="documents">文档管理</el-radio-button>
         </el-radio-group>
       </div>
-      <div class="header-right"></div>
+      <div class="header-right">
+        <el-button :icon="Setting" text @click="settingsVisible = true" title="配置" />
+      </div>
     </div>
 
     <div class="chat-body">
@@ -50,33 +52,43 @@
         <ChatInput
           :model="store.selectedModel"
           :models="store.availableModels"
-          :intent="store.enableIntentRecognition"
           :is-streaming="store.isStreaming"
           @send="handleSend"
           @stop="store.stopGeneration"
-          @update:model="store.setSelectedModel"
-          @update:intent="store.setEnableIntentRecognition"
         />
       </div>
     </div>
+
+    <!-- 配置弹窗 -->
+    <SettingsDialog
+      v-model="settingsVisible"
+      :model="store.selectedModel"
+      :models="store.availableModels"
+      :disabled="store.isStreaming"
+      :show-intent="true"
+      :intent="store.enableIntentRecognition"
+      @update:model="store.setSelectedModel"
+      @update:intent="store.setEnableIntentRecognition"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Fold } from '@element-plus/icons-vue'
+import { Fold, Setting } from '@element-plus/icons-vue'
 import { useChatStore } from '../stores/chat'
 import ChatSidebar from '../components/chat/ChatSidebar.vue'
 import ChatMessageList from '../components/chat/ChatMessageList.vue'
 import ChatInput from '../components/chat/ChatInput.vue'
-import ChatMessage from '../components/chat/ChatMessage.vue' // eslint-disable-line
+import SettingsDialog from '../components/common/SettingsDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
 const store = useChatStore()
 
 const sidebarVisible = ref(false)
+const settingsVisible = ref(false)
 const currentMode = ref('chat')
 
 onMounted(async () => {

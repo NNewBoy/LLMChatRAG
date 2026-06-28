@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, UploadFile, File, Query
+from fastapi import APIRouter, UploadFile, File, Query, HTTPException
 from fastapi.responses import Response
 from typing import Optional
 from schemas.document import (
@@ -28,6 +28,20 @@ router = APIRouter(tags=["documents"])
 async def upload_document(file: UploadFile = File(...)):
     """上传文档"""
     logger.info(f"上传文档: {file.filename}")
+
+    # 检查是否已上传过同名文件
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT id FROM documents WHERE filename = ? LIMIT 1",
+            (file.filename,),
+        )
+        existing = await cursor.fetchone()
+        if existing:
+            logger.warning(f"文件已存在: {file.filename} (id={existing['id']})")
+            raise HTTPException(status_code=400, detail=f"文件 '{file.filename}' 已上传过，不允许重复上传")
+    finally:
+        await db.close()
 
     doc_id = str(uuid.uuid4())
     now = datetime.now().isoformat()
@@ -125,16 +139,8 @@ async def delete_document(document_id: str):
     """删除文档及其向量数据"""
     logger.info(f"删除文档: {document_id}")
 
-    # 删除向量数据
-    document_service.delete_document_vectors(document_id)
-
-    # 删除数据库记录
-    db = await get_db()
-    try:
-        await db.execute("DELETE FROM documents WHERE id = ?", (document_id,))
-        await db.commit()
-    finally:
-        await db.close()
+    # 删除向量数据 + 上传文件 + 数据库记录
+    await document_service.delete_document(document_id)
 
     return Response(status_code=204)
 

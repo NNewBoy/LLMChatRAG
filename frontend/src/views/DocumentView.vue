@@ -86,7 +86,8 @@ async function handleUpload(file) {
     // 开始轮询状态
     pollDocumentStatus(docStore.documents[0].id)
   } catch (e) {
-    ElMessage.error('文档上传失败')
+    const msg = e?.response?.data?.detail || e?.message || '文档上传失败'
+    ElMessage.error(msg)
   }
 }
 

@@ -133,7 +133,7 @@ class ChatService:
         finally:
             await db.close()
 
-    async def get_message_history(self, conversation_id: str, parent_message_id: str = None) -> list[dict]:
+    async def get_message_history(self, conversation_id: str, parent_message_id: str = None, exclude_msg_id: str = None) -> list[dict]:
         """获取对话历史（用于构建上下文）"""
         db = await get_db()
         try:
@@ -159,7 +159,11 @@ class ChatService:
                     (conversation_id,),
                 )
             rows = await cursor.fetchall()
-            return [dict(row) for row in rows]
+            messages = [dict(row) for row in rows]
+            # 排除指定消息（如当前用户消息，避免重复）
+            if exclude_msg_id:
+                messages = [m for m in messages if m["id"] != exclude_msg_id]
+            return messages
         finally:
             await db.close()
 
@@ -199,8 +203,8 @@ class ChatService:
         full_content = ""
 
         try:
-            # 获取对话历史
-            history = await self.get_message_history(conversation_id, parent_message_id)
+            # 获取对话历史（排除当前用户消息，避免重复）
+            history = await self.get_message_history(conversation_id, parent_message_id, exclude_msg_id=user_msg_id)
             logger.info(f"Chat 对话历史: {len(history)} 条消息, conversation={conversation_id}")
 
             # 创建 LLM 实例
@@ -270,14 +274,15 @@ class ChatService:
                     messages.append({"role": msg["role"], "content": msg["content"]})
 
             # 添加当前用户消息
-            messages.append({"role": "user", "content": content})
-
-            # 处理图片（多模态）
             if image:
+                # 多模态: 文本 + 图片合并为一条消息
+                image_url = image if image.startswith("data:") else f"data:image/jpeg;base64,{image}"
                 messages.append({"role": "user", "content": [
                     {"type": "text", "text": content},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image}"}},
+                    {"type": "image_url", "image_url": {"url": image_url}},
                 ]})
+            else:
+                messages.append({"role": "user", "content": content})
 
             # 流式生成
             from langchain_core.messages import HumanMessage, SystemMessage, AIMessage

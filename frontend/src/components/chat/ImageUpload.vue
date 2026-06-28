@@ -2,7 +2,8 @@
   <div class="image-upload">
     <el-upload
       :show-file-list="false"
-      :before-upload="handleBeforeUpload"
+      :auto-upload="false"
+      :on-change="handleFileChange"
       accept="image/*"
     >
       <el-button :icon="Picture" circle :disabled="disabled" title="上传图片" />
@@ -31,14 +32,17 @@ watch(() => props.modelValue, (val) => {
   imagePreview.value = val
 })
 
-function handleBeforeUpload(file) {
+function handleFileChange(uploadFile) {
+  const file = uploadFile.raw
+  if (!file) return
+
   if (!file.type.startsWith('image/')) {
     ElMessage.error('只能上传图片文件')
-    return false
+    return
   }
   if (file.size > 10 * 1024 * 1024) {
     ElMessage.error('图片大小不能超过 10MB')
-    return false
+    return
   }
 
   const reader = new FileReader()
@@ -48,7 +52,6 @@ function handleBeforeUpload(file) {
     emit('update:modelValue', base64)
   }
   reader.readAsDataURL(file)
-  return false
 }
 
 function removeImage() {

@@ -14,12 +14,7 @@
         </el-radio-group>
       </div>
       <div class="header-right">
-        <ModelSelector
-          v-model="store.selectedModel"
-          :models="llmModels"
-          :disabled="store.isStreaming"
-          @change="store.setSelectedModel"
-        />
+        <el-button :icon="Setting" text @click="settingsVisible = true" title="配置" />
       </div>
     </div>
 
@@ -47,19 +42,6 @@
 
       <!-- 对话区 -->
       <div class="rag-main">
-        <!-- RAG 配置面板 -->
-        <RAGConfigPanel
-          :embedding-model="store.selectedEmbeddingModel"
-          :embedding-models="store.availableEmbeddingModels"
-          :enable-query-rewriting="store.enableQueryRewriting"
-          :enable-hybrid-search="store.enableHybridSearch"
-          :enable-reranking="store.enableReranking"
-          @update:embeddingModel="store.setSelectedEmbeddingModel"
-          @update:enableQueryRewriting="store.setEnableQueryRewriting"
-          @update:enableHybridSearch="store.setEnableHybridSearch"
-          @update:enableReranking="store.setEnableReranking"
-        />
-
         <!-- 消息列表 -->
         <div class="message-list-container">
           <div v-if="store.messages.length === 0" class="empty-state">
@@ -87,25 +69,44 @@
         />
       </div>
     </div>
+
+    <!-- 配置弹窗 -->
+    <SettingsDialog
+      v-model="settingsVisible"
+      :model="store.selectedModel"
+      :models="llmModels"
+      :disabled="store.isStreaming"
+      :show-rag="true"
+      :embedding-model="store.selectedEmbeddingModel"
+      :embedding-models="store.availableEmbeddingModels"
+      :query-rewriting="store.enableQueryRewriting"
+      :hybrid-search="store.enableHybridSearch"
+      :reranking="store.enableReranking"
+      @update:model="store.setSelectedModel"
+      @update:embeddingModel="store.setSelectedEmbeddingModel"
+      @update:queryRewriting="store.setEnableQueryRewriting"
+      @update:hybridSearch="store.setEnableHybridSearch"
+      @update:reranking="store.setEnableReranking"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Fold } from '@element-plus/icons-vue'
+import { Fold, Setting } from '@element-plus/icons-vue'
 import { useRagStore } from '../stores/rag'
 import { chatApi } from '../api/chat'
 import RAGChatSidebar from '../components/rag/RAGChatSidebar.vue'
 import RAGChatMessage from '../components/rag/RAGChatMessage.vue'
 import RAGChatInput from '../components/rag/RAGChatInput.vue'
-import RAGConfigPanel from '../components/rag/RAGConfigPanel.vue'
-import ModelSelector from '../components/chat/ModelSelector.vue'
+import SettingsDialog from '../components/common/SettingsDialog.vue'
 
 const router = useRouter()
 const store = useRagStore()
 
 const sidebarVisible = ref(false)
+const settingsVisible = ref(false)
 const currentMode = ref('rag')
 const llmModels = ref([])
 

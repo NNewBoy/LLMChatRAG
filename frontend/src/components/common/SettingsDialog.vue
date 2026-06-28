@@ -1,0 +1,159 @@
+<template>
+  <el-dialog v-model="visible" title="配置" width="480px" :close-on-click-modal="true" append-to-body>
+    <div class="settings-content">
+      <!-- LLM 模型选择 -->
+      <div class="config-section">
+        <label class="config-label">LLM 模型</label>
+        <el-select
+          v-model="localModel"
+          style="width: 100%"
+          :disabled="disabled"
+          @change="emit('update:model', $event)"
+        >
+          <el-option
+            v-for="m in models"
+            :key="m.id"
+            :label="m.name + (m.multimodal ? ' (多模态)' : '')"
+            :value="m.id"
+          >
+            <span>{{ m.name }}</span>
+            <el-tag v-if="m.multimodal" size="small" type="success" style="margin-left: 8px">多模态</el-tag>
+          </el-option>
+        </el-select>
+      </div>
+
+      <!-- 意图识别 (仅 Chat) -->
+      <div class="config-section" v-if="showIntent">
+        <div class="toggle-row">
+          <div>
+            <span>意图识别</span>
+            <p class="toggle-hint">开启后 Agent 自动识别意图，涉及知识库的问题调用 RAG 工具</p>
+          </div>
+          <el-switch v-model="localIntent" @change="emit('update:intent', $event)" />
+        </div>
+      </div>
+
+      <!-- RAG 配置 (仅 RAG) -->
+      <template v-if="showRag">
+        <div class="config-section">
+          <label class="config-label">Embedding 模型</label>
+          <el-select
+            v-model="localEmbeddingModel"
+            style="width: 100%"
+            @change="emit('update:embeddingModel', $event)"
+          >
+            <el-option
+              v-for="m in embeddingModels"
+              :key="m.id"
+              :label="m.name"
+              :value="m.id"
+            />
+          </el-select>
+        </div>
+
+        <div class="config-section">
+          <div class="toggle-row">
+            <span>Query 改写</span>
+            <el-switch v-model="localQueryRewriting" @change="emit('update:queryRewriting', $event)" />
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="toggle-row">
+            <span>混合检索 (BM25+向量)</span>
+            <el-switch v-model="localHybridSearch" @change="emit('update:hybridSearch', $event)" />
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="toggle-row">
+            <span>重排序</span>
+            <el-switch v-model="localReranking" @change="emit('update:reranking', $event)" />
+          </div>
+        </div>
+      </template>
+    </div>
+  </el-dialog>
+</template>
+
+<script setup>
+import { ref, watch } from 'vue'
+
+const props = defineProps({
+  modelValue: { type: Boolean, default: false },
+  model: { type: String, default: '' },
+  models: { type: Array, default: () => [] },
+  disabled: { type: Boolean, default: false },
+  showIntent: { type: Boolean, default: false },
+  intent: { type: Boolean, default: true },
+  showRag: { type: Boolean, default: false },
+  embeddingModel: { type: String, default: '' },
+  embeddingModels: { type: Array, default: () => [] },
+  queryRewriting: { type: Boolean, default: true },
+  hybridSearch: { type: Boolean, default: false },
+  reranking: { type: Boolean, default: false },
+})
+
+const emit = defineEmits([
+  'update:modelValue',
+  'update:model',
+  'update:intent',
+  'update:embeddingModel',
+  'update:queryRewriting',
+  'update:hybridSearch',
+  'update:reranking',
+])
+
+const visible = ref(props.modelValue)
+const localModel = ref(props.model)
+const localIntent = ref(props.intent)
+const localEmbeddingModel = ref(props.embeddingModel)
+const localQueryRewriting = ref(props.queryRewriting)
+const localHybridSearch = ref(props.hybridSearch)
+const localReranking = ref(props.reranking)
+
+watch(() => props.modelValue, (val) => { visible.value = val })
+watch(visible, (val) => { emit('update:modelValue', val) })
+
+watch(() => props.model, (val) => { localModel.value = val })
+watch(() => props.intent, (val) => { localIntent.value = val })
+watch(() => props.embeddingModel, (val) => { localEmbeddingModel.value = val })
+watch(() => props.queryRewriting, (val) => { localQueryRewriting.value = val })
+watch(() => props.hybridSearch, (val) => { localHybridSearch.value = val })
+watch(() => props.reranking, (val) => { localReranking.value = val })
+</script>
+
+<style scoped>
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.config-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #606266;
+}
+
+.toggle-hint {
+  font-size: 12px;
+  color: #909399;
+  margin: 4px 0 0;
+  max-width: 320px;
+}
+</style>

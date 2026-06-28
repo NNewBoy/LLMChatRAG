@@ -31,6 +31,22 @@
           <el-button text size="small" @click="$emit('delete', message.id)">
             <el-icon><Delete /></el-icon> 删除
           </el-button>
+          <el-button
+            text size="small"
+            :type="message.is_correct === 1 ? 'success' : ''"
+            @click="$emit('feedback', { id: message.id, isCorrect: true })"
+            v-if="showFeedback && message.id && !message.id.startsWith('temp')"
+          >
+            <el-icon><Check /></el-icon> 正确
+          </el-button>
+          <el-button
+            text size="small"
+            :type="message.is_correct === 0 ? 'danger' : ''"
+            @click="$emit('feedback', { id: message.id, isCorrect: false })"
+            v-if="showFeedback && message.id && !message.id.startsWith('temp')"
+          >
+            <el-icon><Close /></el-icon> 错误
+          </el-button>
         </el-button-group>
       </div>
     </div>
@@ -41,16 +57,17 @@
 import { computed } from 'vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
-import { RefreshRight, ChatDotRound, Delete } from '@element-plus/icons-vue'
+import { RefreshRight, ChatDotRound, Delete, Check, Close } from '@element-plus/icons-vue'
 import ChatThinking from './ChatThinking.vue'
 import ChatToolCall from './ChatToolCall.vue'
 
 const props = defineProps({
   message: { type: Object, required: true },
   isStreaming: { type: Boolean, default: false },
+  showFeedback: { type: Boolean, default: false },
 })
 
-defineEmits(['regenerate', 'followup', 'delete'])
+defineEmits(['regenerate', 'followup', 'delete', 'feedback'])
 
 // 配置 marked
 marked.setOptions({

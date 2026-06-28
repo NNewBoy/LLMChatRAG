@@ -74,10 +74,19 @@ class FAISSVectorStore:
 
     def _save(self):
         """持久化 FAISS 索引到磁盘"""
+        index_file = self.index_path / "faiss.index"
+        meta_file = self.index_path / "metadata.json"
+
         if faiss is None or self._llama_store is None:
+            # 索引为空时，删除磁盘文件
+            if index_file.exists():
+                index_file.unlink()
+                logger.info("已删除空的 FAISS 索引文件")
+            with open(meta_file, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False)
+            logger.info("元数据已清空")
             return
 
-        index_file = self.index_path / "faiss.index"
         try:
             faiss_index = self._llama_store._faiss_index
             faiss.write_index(faiss_index, str(index_file))
@@ -86,7 +95,6 @@ class FAISSVectorStore:
             logger.error(f"保存 FAISS 索引失败: {e}")
 
         # 保存元数据
-        meta_file = self.index_path / "metadata.json"
         try:
             with open(meta_file, "w", encoding="utf-8") as f:
                 json.dump(self.metadata, f, ensure_ascii=False, indent=2)

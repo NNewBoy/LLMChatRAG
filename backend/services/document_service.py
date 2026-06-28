@@ -15,7 +15,9 @@ class DocumentService:
 
     def __init__(self):
         self.parser = DocumentParser()
-        self.upload_dir = Path("./data/uploads")
+        # 基于当前文件位置确定 backend/ 根目录，避免相对路径问题
+        self.base_dir = Path(__file__).resolve().parent.parent
+        self.upload_dir = self.base_dir / "data" / "uploads"
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         self._pipeline = None  # 延迟初始化
 
@@ -58,6 +60,21 @@ class DocumentService:
 
         if file_type is None:
             raise ValueError(f"不支持的文件类型: {filename}")
+
+        # 检查是否已上传过同名文件
+        db = await get_db()
+        try:
+            cursor = await db.execute(
+                "SELECT id, status FROM documents WHERE filename = ? ORDER BY created_at DESC LIMIT 1",
+                (filename,),
+            )
+            existing = await cursor.fetchone()
+            if existing:
+                existing_id, existing_status = existing["id"], existing["status"]
+                logger.warning(f"文件已存在: {filename} (id={existing_id}, status={existing_status})")
+                raise ValueError(f"文件 '{filename}' 已上传过，不允许重复上传")
+        finally:
+            await db.close()
 
         # 保存到数据库
         db = await get_db()
@@ -191,6 +208,19 @@ class DocumentService:
                 pipeline.remove_document(doc_id)
             except Exception as e:
                 logger.warning(f"删除向量数据失败: {e}")
+
+            # 从磁盘删除上传文件
+            try:
+                import glob
+                pattern = str(self.upload_dir / f"{doc_id}.*")
+                logger.info(f"查找上传文件: pattern={pattern}, upload_dir={self.upload_dir}")
+                matched = glob.glob(pattern)
+                logger.info(f"匹配到 {len(matched)} 个文件: {matched}")
+                for filepath in matched:
+                    Path(filepath).unlink(missing_ok=True)
+                    logger.info(f"已删除上传文件: {filepath}")
+            except Exception as e:
+                logger.warning(f"删除上传文件失败: {e}")
 
             # 从数据库删除
             await db.execute("DELETE FROM documents WHERE id = ?", (doc_id,))

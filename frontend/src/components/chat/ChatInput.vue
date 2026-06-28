@@ -2,16 +2,6 @@
   <div class="chat-input">
     <!-- 工具栏 -->
     <div class="input-toolbar">
-      <ModelSelector
-        v-model="localModel"
-        :models="models"
-        :disabled="isStreaming"
-        @change="$emit('update:model', $event)"
-      />
-      <IntentToggle
-        v-model="localIntent"
-        @change="$emit('update:intent', $event)"
-      />
       <ImageUpload
         v-if="supportsMultimodal"
         v-model="imageData"
@@ -57,23 +47,18 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { Promotion, VideoPause } from '@element-plus/icons-vue'
-import ModelSelector from './ModelSelector.vue'
-import IntentToggle from './IntentToggle.vue'
 import ImageUpload from './ImageUpload.vue'
 
 const props = defineProps({
   model: { type: String, default: '' },
   models: { type: Array, default: () => [] },
-  intent: { type: Boolean, default: true },
   isStreaming: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['send', 'stop', 'update:model', 'update:intent'])
+const emit = defineEmits(['send', 'stop'])
 
 const textContent = ref('')
 const imageData = ref(null)
-const localModel = ref(props.model)
-const localIntent = ref(props.intent)
 
 // 检查当前模型是否支持多模态
 const supportsMultimodal = computed(() => {
