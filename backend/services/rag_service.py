@@ -86,12 +86,14 @@ class RAGService:
 
         # 创建 LLM 实例
         llm = await AgentFactory.get_llm(model)
+        logger.info(f"RAG LLM 实例创建: model={model}")
 
         # 确保 pipeline 初始化
         pipeline = await self._ensure_pipeline(llm)
 
         # 加载错题范例
         bad_case_examples = await self._load_bad_case_examples()
+        logger.info(f"错题范例加载: {len(bad_case_examples)} 条")
 
         # 创建助手消息占位
         assistant_msg_id = str(uuid.uuid4())

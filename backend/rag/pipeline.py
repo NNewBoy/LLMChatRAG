@@ -42,23 +42,30 @@ class RAGPipeline:
 
         # 1. 解析文档
         file_type = self.parser.get_file_type(filename)
+        logger.info(f"文档类型: {file_type}, 开始解析...")
         text = self.parser.parse(file_path, file_type)
+        logger.info(f"文档解析完成: 文本长度={len(text)} 字符")
 
         # 2. 文档分块
         chunks = self.chunker.chunk(text)
         for chunk in chunks:
             chunk["document_id"] = document_id
             chunk["filename"] = filename
+        logger.info(f"文档分块完成: {len(chunks)} 个块")
 
         # 3. 向量化
         texts = [c["text"] for c in chunks]
+        logger.info(f"开始向量化 {len(texts)} 条文本...")
         vectors = await self.embedder.embed(texts)
+        logger.info(f"向量化完成: {len(vectors)} 个向量")
 
         # 4. 存入 FAISS
         self.vector_store.add(vectors, chunks, document_id)
+        logger.info(f"向量已存入 FAISS")
 
         # 5. 更新 BM25 索引
         self.retriever.fit_bm25(self.vector_store.metadata)
+        logger.info(f"BM25 索引已更新")
 
         logger.info(f"文档索引完成: {filename}, 分块数: {len(chunks)}")
         return len(chunks)
@@ -122,6 +129,11 @@ class RAGPipeline:
             embedding_model=embedding_model,
         )
 
+        logger.info(f"检索结果: {len(results)} 条")
+        for i, r in enumerate(results[:5]):
+            logger.info(f"  [{i}] score={r.get('score', 0):.4f}, filename={r.get('filename', '')}, "
+                         f"text={r.get('text', '')[:80]}...")
+
         tool_output = f"找到 {len(results)} 条相关文档"
         if results:
             sources = [r.get("filename", "未知") for r in results[:3]]
@@ -141,17 +153,20 @@ class RAGPipeline:
         # 3. 重排序 (可选)
         if enable_reranking:
             yield sse_event("thinking", {"content": "正在对检索结果进行重排序..."})
+            logger.info(f"开始重排序: {len(results)} 条候选, top_n={settings.rag_top_n}")
             try:
                 results = await self.reranker.rerank(
                     search_query, results,
                     top_n=settings.rag_top_n,
                     enable_reranking=True,
                 )
+                logger.info(f"重排序完成: 返回 {len(results)} 条")
             except Exception as e:
                 logger.warning(f"重排序失败，使用原始排序: {e}")
                 results = results[:settings.rag_top_n]
         else:
             results = results[:settings.rag_top_n]
+            logger.info(f"未启用重排序, 截取前 {len(results)} 条")
 
         yield sse_event("thinking", {"content": f"已选出 {len(results)} 条最相关文档，正在生成回答..."})
 

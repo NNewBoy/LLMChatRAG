@@ -201,14 +201,18 @@ class ChatService:
         try:
             # 获取对话历史
             history = await self.get_message_history(conversation_id, parent_message_id)
+            logger.info(f"Chat 对话历史: {len(history)} 条消息, conversation={conversation_id}")
 
             # 创建 LLM 实例
             llm = await AgentFactory.get_llm(model)
+            logger.info(f"LLM 实例创建: model={model}")
 
             # 意图识别（如果启用）
             if enable_intent_recognition:
+                logger.info("开始意图识别...")
                 yield sse_event("thinking", {"content": "正在分析问题意图..."})
                 intent_result = await self.intent_router.classify(content, llm, history)
+                logger.info(f"意图识别完成: intent={intent_result['intent']}, confidence={intent_result['confidence']}")
                 yield sse_event("intent", intent_result)
 
                 if intent_result["intent"] == "rag":
@@ -247,6 +251,7 @@ class ChatService:
                         gen = Generator(llm)
                         prompt = gen.build_prompt(content, results, [])
                         messages = [{"role": "system", "content": prompt}]
+                        logger.info(f"Chat RAG 路径: 检索到 {len(results)} 条文档, 已构建 RAG prompt")
                     else:
                         yield sse_event("tool_result", {
                             "tool_name": "rag_search",
@@ -285,6 +290,13 @@ class ChatService:
                 elif m["role"] == "assistant":
                     lc_messages.append(AIMessage(content=m["content"]))
 
+            # 打印最终发送给 LLM 的 prompt
+            logger.info(f"Chat 最终 Prompt ({len(lc_messages)} 条消息):")
+            for i, m in enumerate(lc_messages):
+                content_preview = m.content[:500] if isinstance(m.content, str) else str(m.content)[:500]
+                logger.info(f"  [{i}] {m.__class__.__name__}: {content_preview}{'...' if len(str(m.content)) > 500 else ''}")
+
+            logger.info("开始 LLM 流式生成...")
             async for chunk in llm.astream(lc_messages):
                 if self.is_stopped(assistant_msg_id):
                     yield sse_event("thinking", {"content": "生成已停止"})

@@ -94,6 +94,7 @@ class DocumentService:
 
         try:
             for status in statuses[:-1]:
+                logger.info(f"文档处理状态变更: {filename} => {status}")
                 db = await get_db()
                 await db.execute(
                     "UPDATE documents SET status = ? WHERE id = ?",

@@ -37,13 +37,20 @@ class Generator:
         context_text += "## 参考文档：\n\n"
         for i, chunk in enumerate(context_chunks):
             text = chunk.get("text", "")
-            source = chunk.get("metadata", {}).get("filename", "未知来源")
+            source = chunk.get("filename", chunk.get("metadata", {}).get("filename", "未知来源"))
             context_text += f"[{i + 1}] (来源: {source})\n{text}\n\n"
 
         context_text += f"## 用户问题：{query}\n\n"
         context_text += "请基于以上文档内容回答，如果文档中没有相关信息，请明确说明。请引用对应的文档编号。"
 
         messages.append(HumanMessage(content=context_text))
+
+        # 打印最终 RAG Prompt
+        logger.info(f"RAG 最终 Prompt 构建 ({len(messages)} 条消息):")
+        logger.info(f"  System: {self.SYSTEM_PROMPT}")
+        logger.info(f"  参考文档数: {len(context_chunks)}, 错题范例数: {len(bad_case_examples or [])}")
+        logger.info(f"  Human (前1000字): {context_text[:1000]}{'...' if len(context_text) > 1000 else ''}")
+
         return messages
 
     async def generate_stream(self, messages: list, llm: BaseChatModel = None) -> AsyncGenerator[str, None]:
