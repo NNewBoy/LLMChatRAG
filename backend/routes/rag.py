@@ -18,6 +18,7 @@ from schemas.chat import (
 from models.database import get_db
 from services.rag_service import rag_service
 from utils.logger import logger
+from utils.sse import sse_event
 
 router = APIRouter(prefix="/api/rag", tags=["rag"])
 
@@ -132,6 +133,7 @@ async def send_message(conversation_id: str, req: RAGMessageRequest):
 @router.post("/conversations/{conversation_id}/messages/{message_id}/stop", response_model=StopResponse)
 async def stop_generation(conversation_id: str, message_id: str):
     """停止生成"""
+    rag_service.request_stop(message_id)
     return StopResponse(status="stopped", message_id=message_id)
 
 
@@ -139,11 +141,52 @@ async def stop_generation(conversation_id: str, message_id: str):
 async def regenerate_message(conversation_id: str, message_id: str, req: RegenerateRequest):
     """重新生成 RAG 回答 (SSE 流式)"""
     async def event_stream():
+        # 查询被重新生成的消息，获取原始问题和父消息 ID
+        db = await get_db()
+        try:
+            cursor = await db.execute(
+                "SELECT role, parent_message_id FROM messages WHERE id = ?",
+                (message_id,),
+            )
+            msg = await cursor.fetchone()
+            if not msg:
+                yield sse_event("error", {"code": "NOT_FOUND", "message": "消息不存在"})
+                return
+
+            parent_id = msg["parent_message_id"]
+            content = ""
+            if parent_id:
+                cursor = await db.execute(
+                    "SELECT content FROM messages WHERE id = ?",
+                    (parent_id,),
+                )
+                parent_msg = await cursor.fetchone()
+                if parent_msg:
+                    content = parent_msg["content"]
+
+            # 删除该消息及其之后的所有消息
+            cursor = await db.execute(
+                "SELECT created_at FROM messages WHERE id = ?", (message_id,)
+            )
+            row = await cursor.fetchone()
+            if row:
+                await db.execute(
+                    "DELETE FROM messages WHERE conversation_id = ? AND created_at >= ?",
+                    (conversation_id, row["created_at"]),
+                )
+                await db.commit()
+        finally:
+            await db.close()
+
+        if not content:
+            yield sse_event("error", {"code": "NOT_FOUND", "message": "原始问题不存在"})
+            return
+
         async for event in rag_service.send_message_stream(
             conversation_id=conversation_id,
-            content="",  # 从历史消息获取
+            content=content,
             model=req.model,
-            parent_message_id=None,
+            parent_message_id=parent_id,
         ):
             yield event
 
@@ -156,11 +199,23 @@ async def regenerate_message(conversation_id: str, message_id: str, req: Regener
 
 @router.delete("/conversations/{conversation_id}/messages/{message_id}")
 async def delete_message(conversation_id: str, message_id: str):
-    """删除指定消息"""
+    """删除指定消息，若为助手回答则同时删除对应的用户提问"""
     db = await get_db()
     try:
-        await db.execute("DELETE FROM messages WHERE id = ?", (message_id,))
-        await db.commit()
+        cursor = await db.execute(
+            "SELECT role, parent_message_id FROM messages WHERE id = ?",
+            (message_id,),
+        )
+        msg = await cursor.fetchone()
+
+        if msg:
+            await db.execute("DELETE FROM messages WHERE id = ?", (message_id,))
+            if msg["role"] == "assistant" and msg["parent_message_id"]:
+                await db.execute(
+                    "DELETE FROM messages WHERE id = ?",
+                    (msg["parent_message_id"],),
+                )
+            await db.commit()
     finally:
         await db.close()
     return Response(status_code=204)
@@ -169,5 +224,6 @@ async def delete_message(conversation_id: str, message_id: str):
 @router.post("/conversations/{conversation_id}/messages/{message_id}/feedback")
 async def submit_feedback(conversation_id: str, message_id: str, req: FeedbackRequest):
     """标记答案正确/错误"""
+    logger.info(f"收到反馈: conv={conversation_id}, msg={message_id}, is_correct={req.is_correct}")
     result = await rag_service.submit_feedback(conversation_id, message_id, req.is_correct)
     return result

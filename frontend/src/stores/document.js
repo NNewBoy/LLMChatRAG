@@ -58,7 +58,9 @@ export const useDocumentStore = defineStore('document', () => {
   async function fetchBadCases() {
     try {
       const res = await documentApi.getBadCases()
-      badCases.value = res.data.bad_cases || []
+      // 兼容 { bad_cases: [...] } 和 [...] 两种返回格式
+      const data = res.data
+      badCases.value = Array.isArray(data) ? data : (data.bad_cases || [])
     } catch (e) {
       console.error('获取错题集失败:', e)
     }

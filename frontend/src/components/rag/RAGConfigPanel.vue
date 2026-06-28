@@ -27,7 +27,7 @@
               <el-switch
                 v-model="localQueryRewriting"
                 size="small"
-                @change="$emit('update:queryRewriting', $event)"
+                @change="$emit('update:enableQueryRewriting', $event)"
               />
             </div>
           </div>
@@ -38,7 +38,7 @@
               <el-switch
                 v-model="localHybridSearch"
                 size="small"
-                @change="$emit('update:hybridSearch', $event)"
+                @change="$emit('update:enableHybridSearch', $event)"
               />
             </div>
           </div>
@@ -49,7 +49,7 @@
               <el-switch
                 v-model="localReranking"
                 size="small"
-                @change="$emit('update:reranking', $event)"
+                @change="$emit('update:enableReranking', $event)"
               />
             </div>
           </div>
@@ -60,28 +60,34 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   embeddingModel: { type: String, default: '' },
   embeddingModels: { type: Array, default: () => [] },
-  queryRewriting: { type: Boolean, default: true },
-  hybridSearch: { type: Boolean, default: false },
-  reranking: { type: Boolean, default: false },
+  enableQueryRewriting: { type: Boolean, default: true },
+  enableHybridSearch: { type: Boolean, default: false },
+  enableReranking: { type: Boolean, default: false },
 })
 
 defineEmits([
   'update:embeddingModel',
-  'update:queryRewriting',
-  'update:hybridSearch',
-  'update:reranking',
+  'update:enableQueryRewriting',
+  'update:enableHybridSearch',
+  'update:enableReranking',
 ])
 
 const activeNames = ref([])
 const localEmbeddingModel = ref(props.embeddingModel)
-const localQueryRewriting = ref(props.queryRewriting)
-const localHybridSearch = ref(props.hybridSearch)
-const localReranking = ref(props.reranking)
+const localQueryRewriting = ref(props.enableQueryRewriting)
+const localHybridSearch = ref(props.enableHybridSearch)
+const localReranking = ref(props.enableReranking)
+
+// 监听 props 变化，同步到本地
+watch(() => props.embeddingModel, (v) => { localEmbeddingModel.value = v })
+watch(() => props.enableQueryRewriting, (v) => { localQueryRewriting.value = v })
+watch(() => props.enableHybridSearch, (v) => { localHybridSearch.value = v })
+watch(() => props.enableReranking, (v) => { localReranking.value = v })
 </script>
 
 <style scoped>

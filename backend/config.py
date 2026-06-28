@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     embedding_model: str = "BAAI/bge-large-zh-v1.5"
     embedding_api_key: str = ""
     embedding_api_base_url: str = "https://api.siliconflow.cn/v1"
+    embedding_provider: str = "siliconflow"  # "llama_index" 或 "siliconflow"
 
     # FAISS
     faiss_db_path: str = "./data/faiss/"

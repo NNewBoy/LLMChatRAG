@@ -19,6 +19,16 @@ class RAGService:
         self.factory = AgentFactory()
         self.pipeline = None  # 延迟初始化
         self._bad_cases_cache = None
+        self._active_generations: dict[str, bool] = {}  # 停止标志
+
+    def request_stop(self, message_id: str):
+        """请求停止生成"""
+        self._active_generations[message_id] = False
+        logger.info(f"请求停止 RAG 生成: {message_id}")
+
+    def is_stopped(self, message_id: str) -> bool:
+        """检查是否被请求停止"""
+        return not self._active_generations.get(message_id, True)
 
     async def _ensure_pipeline(self, llm):
         """延迟初始化 RAG pipeline"""
@@ -85,6 +95,9 @@ class RAGService:
 
         # 创建助手消息占位
         assistant_msg_id = str(uuid.uuid4())
+        self._active_generations[assistant_msg_id] = True
+        # 立即发送 message_id 给前端，用于停止操作
+        yield sse_event("init", {"message_id": assistant_msg_id})
         full_content = ""
         thinking_parts = []
         tool_call_parts = []
@@ -99,6 +112,11 @@ class RAGService:
                 enable_reranking=enable_reranking,
                 bad_case_examples=bad_case_examples,
             ):
+                # 检查是否被请求停止
+                if self.is_stopped(assistant_msg_id):
+                    yield sse_event("thinking", {"content": "生成已停止"})
+                    break
+
                 # 解析 SSE 事件，收集内容
                 if "token" in event:
                     try:
@@ -150,6 +168,8 @@ class RAGService:
                 "message": str(e),
                 "message_id": assistant_msg_id,
             })
+        finally:
+            self._active_generations.pop(assistant_msg_id, None)
 
     async def submit_feedback(self, conversation_id: str, message_id: str, is_correct: bool):
         """标记答案正确/错误，错误时自动创建错题记录"""
@@ -182,14 +202,25 @@ class RAGService:
                         if parent:
                             question = parent["content"]
 
-                    # 创建错题记录
-                    bad_case_id = str(uuid.uuid4())
-                    await db.execute(
-                        "INSERT INTO bad_cases (id, message_id, question, wrong_answer) "
-                        "VALUES (?, ?, ?, ?)",
-                        (bad_case_id, message_id, question, wrong_answer),
+                    # 检查是否已存在错题记录，避免重复创建
+                    cursor = await db.execute(
+                        "SELECT id FROM bad_cases WHERE message_id = ?",
+                        (message_id,),
                     )
-                    logger.info(f"创建错题记录: {bad_case_id}")
+                    existing = await cursor.fetchone()
+                    if existing:
+                        logger.info(f"错题记录已存在: message_id={message_id}")
+                    else:
+                        # 创建错题记录
+                        bad_case_id = str(uuid.uuid4())
+                        await db.execute(
+                            "INSERT INTO bad_cases (id, message_id, question, wrong_answer) "
+                            "VALUES (?, ?, ?, ?)",
+                            (bad_case_id, message_id, question, wrong_answer),
+                        )
+                        logger.info(f"创建错题记录: {bad_case_id}")
+                else:
+                    logger.warning(f"未找到消息: {message_id}, 无法创建错题")
 
             await db.commit()
         finally:

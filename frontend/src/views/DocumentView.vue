@@ -38,7 +38,12 @@
         <!-- 错题集 Tab -->
         <el-tab-pane label="错题集编辑" name="badcases">
           <div class="tab-content">
-            <BadCaseEditor />
+            <BadCaseEditor
+              :bad-cases="docStore.badCases"
+              @refresh="docStore.fetchBadCases"
+              @delete="docStore.deleteBadCase"
+              @update="handleUpdateBadCase"
+            />
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -104,6 +109,11 @@ function pollDocumentStatus(docId) {
 async function handleDeleteDocument(id) {
   await docStore.deleteDocument(id)
   ElMessage.success('文档已删除')
+}
+
+async function handleUpdateBadCase({ id, correct_answer, use_as_example }) {
+  await docStore.updateBadCase(id, correct_answer, use_as_example)
+  ElMessage.success('错题已更新')
 }
 </script>
 

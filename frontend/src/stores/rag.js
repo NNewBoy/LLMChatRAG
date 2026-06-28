@@ -122,6 +122,8 @@ export const useRagStore = defineStore('rag', () => {
       created_at: new Date().toISOString(),
     }
     messages.value.push(assistantMsg)
+    // 获取响应式代理对象，后续修改才能触发 UI 更新
+    const reactiveAssistantMsg = messages.value[messages.value.length - 1]
 
     try {
       await ragApi.sendMessageStream(
@@ -136,29 +138,33 @@ export const useRagStore = defineStore('rag', () => {
           enable_reranking: enableReranking.value,
         },
         {
+          onInit: (data) => {
+            // 更新临时 ID 为真实 message_id，用于停止操作
+            reactiveAssistantMsg.id = data.message_id
+          },
           onThinking: (data) => {
-            assistantMsg.thinking += (assistantMsg.thinking ? '\n' : '') + data.content
+            reactiveAssistantMsg.thinking += (reactiveAssistantMsg.thinking ? '\n' : '') + data.content
             callbacks.onThinking?.(data)
           },
           onToolCall: (data) => {
-            assistantMsg.tool_calls += `\n[工具调用: ${data.tool_name}]`
+            reactiveAssistantMsg.tool_calls += `\n[工具调用: ${data.tool_name}]`
             callbacks.onToolCall?.(data)
           },
           onToolResult: (data) => {
-            assistantMsg.tool_calls += `\n[工具结果: ${data.tool_output}]`
+            reactiveAssistantMsg.tool_calls += `\n[工具结果: ${data.tool_output}]`
             callbacks.onToolResult?.(data)
           },
           onToken: (data) => {
-            assistantMsg.content += data.content
+            reactiveAssistantMsg.content += data.content
             callbacks.onToken?.(data)
           },
           onDone: (data) => {
-            assistantMsg.id = data.message_id
+            reactiveAssistantMsg.id = data.message_id
             isStreaming.value = false
             callbacks.onDone?.(data)
           },
           onError: (data) => {
-            assistantMsg.content += `\n[错误: ${data.message}]`
+            reactiveAssistantMsg.content += `\n[错误: ${data.message}]`
             isStreaming.value = false
             callbacks.onError?.(data)
           },
@@ -166,7 +172,7 @@ export const useRagStore = defineStore('rag', () => {
       )
     } catch (e) {
       isStreaming.value = false
-      assistantMsg.content += `\n[请求失败: ${e.message}]`
+      reactiveAssistantMsg.content += `\n[请求失败: ${e.message}]`
     }
   }
 
@@ -188,7 +194,10 @@ export const useRagStore = defineStore('rag', () => {
   async function deleteMessage(messageId) {
     try {
       await ragApi.deleteMessage(currentConversationId.value, messageId)
-      messages.value = messages.value.filter(m => m.id !== messageId)
+      // 查找被删除的消息，若是助手回答则同时删除对应的用户提问
+      const msg = messages.value.find(m => m.id === messageId)
+      const parentId = msg?.parent_message_id
+      messages.value = messages.value.filter(m => m.id !== messageId && m.id !== parentId)
     } catch (e) {
       console.error('删除消息失败:', e)
     }
@@ -215,6 +224,7 @@ export const useRagStore = defineStore('rag', () => {
       created_at: new Date().toISOString(),
     }
     messages.value.push(assistantMsg)
+    const reactiveMsg = messages.value[messages.value.length - 1]
 
     try {
       await ragApi.regenerateMessageStream(
@@ -223,24 +233,24 @@ export const useRagStore = defineStore('rag', () => {
         { model: selectedModel.value },
         {
           onThinking: (data) => {
-            assistantMsg.thinking += (assistantMsg.thinking ? '\n' : '') + data.content
+            reactiveMsg.thinking += (reactiveMsg.thinking ? '\n' : '') + data.content
           },
           onToken: (data) => {
-            assistantMsg.content += data.content
+            reactiveMsg.content += data.content
           },
           onDone: (data) => {
-            assistantMsg.id = data.message_id
+            reactiveMsg.id = data.message_id
             isStreaming.value = false
           },
           onError: (data) => {
-            assistantMsg.content += `\n[错误: ${data.message}]`
+            reactiveMsg.content += `\n[错误: ${data.message}]`
             isStreaming.value = false
           },
         }
       )
     } catch (e) {
       isStreaming.value = false
-      assistantMsg.content += `\n[请求失败: ${e.message}]`
+      reactiveMsg.content += `\n[请求失败: ${e.message}]`
     }
   }
 

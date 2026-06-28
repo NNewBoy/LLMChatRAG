@@ -191,6 +191,9 @@ class ChatService:
         assistant_msg_id = str(uuid.uuid4())
         self._active_generations[assistant_msg_id] = True
 
+        # 立即发送 message_id 给前端，用于停止操作
+        yield sse_event("init", {"message_id": assistant_msg_id})
+
         thinking_parts = []
         tool_call_parts = []
         full_content = ""
@@ -294,14 +297,14 @@ class ChatService:
             # 保存 assistant 消息
             thinking_json = json.dumps(thinking_parts, ensure_ascii=False) if thinking_parts else None
             tool_calls_json = json.dumps(tool_call_parts, ensure_ascii=False) if tool_call_parts else None
-            await self.save_message(
+            saved_msg_id = await self.save_message(
                 conversation_id, "assistant", full_content,
                 thinking=thinking_json, tool_calls=tool_calls_json,
                 parent_message_id=user_msg_id,
             )
 
             yield sse_event("done", {
-                "message_id": assistant_msg_id,
+                "message_id": saved_msg_id,
                 "full_content": full_content,
                 "conversation_id": conversation_id,
             })

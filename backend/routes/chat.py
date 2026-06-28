@@ -141,11 +141,26 @@ async def regenerate_message(conversation_id: str, message_id: str, req: Regener
 
 @router.delete("/conversations/{conversation_id}/messages/{message_id}")
 async def delete_message(conversation_id: str, message_id: str):
-    """删除指定消息"""
+    """删除指定消息，若为助手回答则同时删除对应的用户提问"""
     db = await get_db()
     try:
-        await db.execute("DELETE FROM messages WHERE id = ?", (message_id,))
-        await db.commit()
+        # 查询该消息的 role 和 parent_message_id
+        cursor = await db.execute(
+            "SELECT role, parent_message_id FROM messages WHERE id = ?",
+            (message_id,),
+        )
+        msg = await cursor.fetchone()
+
+        if msg:
+            # 删除该消息
+            await db.execute("DELETE FROM messages WHERE id = ?", (message_id,))
+            # 若为助手回答，同时删除其对应的用户提问
+            if msg["role"] == "assistant" and msg["parent_message_id"]:
+                await db.execute(
+                    "DELETE FROM messages WHERE id = ?",
+                    (msg["parent_message_id"],),
+                )
+            await db.commit()
     finally:
         await db.close()
     return Response(status_code=204)
