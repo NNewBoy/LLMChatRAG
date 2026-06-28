@@ -1,0 +1,43 @@
+# ── Python ──────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+# dist/
+build/
+*.egg
+
+# ── Virtual Environment ────────────────────────
+.venv/
+venv/
+env/
+
+# ── IDE ────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Environment Variables ──────────────────────
+backend/.env
+
+# ── Database ───────────────────────────────────
+backend/data/*.db
+backend/data/*.db-wal
+backend/data/*.db-shm
+backend/*.db
+backend/data/
+
+# ── Node.js (frontend) ────────────────────────
+frontend/node_modules/
+# frontend/dist/
+
+# ── OS ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ───────────────────────────────────────
+*.log
+
