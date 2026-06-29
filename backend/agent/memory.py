@@ -1,9 +1,9 @@
 """长期记忆管理 - 使用 SQLite 存储跨会话记忆"""
 
 import uuid
-from datetime import datetime
 from models.database import get_db
 from utils.logger import logger
+from utils.timezone import now_iso
 
 
 class LongTermMemory:
@@ -15,7 +15,7 @@ class LongTermMemory:
     async def store(self, key: str, value: str, importance: float = 0.5):
         """存储记忆，如果 key 已存在则更新 importance"""
         memory_id = str(uuid.uuid4())
-        now = datetime.now().isoformat()
+        now = now_iso()
         db = await get_db()
         try:
             await db.execute(
@@ -48,7 +48,7 @@ class LongTermMemory:
             rows = await cursor.fetchall()
 
             # 更新最后访问时间
-            now = datetime.now().isoformat()
+            now = now_iso()
             for row in rows:
                 await db.execute(
                     "UPDATE long_term_memory SET last_accessed_at = ? WHERE id = ?",

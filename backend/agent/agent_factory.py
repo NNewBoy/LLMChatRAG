@@ -5,6 +5,7 @@ import shutil
 from typing import Optional
 from config import settings
 from utils.logger import logger
+from utils.timezone import now_iso, now_str
 from agent.skills_loader import SkillsLoader
 from agent.tools import create_rag_tool
 from agent.memory import LongTermMemory
@@ -107,59 +108,6 @@ class AgentFactory:
             raise
 
     @classmethod
-    async def create_agent(cls, llm, enable_rag: bool = True):
-        """
-        创建 DeepAgents Agent 实例
-
-        Args:
-            llm: LangChain LLM 实例
-            enable_rag: 是否加载 RAG 工具
-
-        Returns:
-            DeepAgents Agent 实例
-        """
-        logger.info(f"创建 Agent: enable_rag={enable_rag}")
-
-        # 加载技能
-        skills_loader = SkillsLoader()
-        skills = skills_loader.load_all()
-
-        # 准备工具列表
-        tools = []
-
-        if enable_rag and cls._rag_pipeline:
-            rag_tool = create_rag_tool(cls._rag_pipeline)
-            tools.append(rag_tool)
-            logger.info("RAG 工具已加载")
-
-        # 加载 MCP 工具（联网搜索等）
-        mcp_tools = await cls.get_mcp_tools()
-        tools.extend(mcp_tools)
-
-        # 构建系统提示
-        system_prompt = cls._build_system_prompt(skills, enable_rag)
-
-        try:
-            # 尝试使用 DeepAgents 框架创建 Agent
-            from deepagents import create_deep_agent
-
-            agent = create_deep_agent(
-                model=llm,
-                tools=tools,
-                system_prompt=system_prompt,
-            )
-            logger.info("DeepAgents Agent 创建成功")
-            return agent
-        except ImportError:
-            # DeepAgents 不可用时，回退到 LangChain Agent
-            logger.warning("DeepAgents 不可用，回退到 LangChain AgentExecutor")
-            return cls._create_langchain_agent(llm, tools, system_prompt)
-        except Exception as e:
-            logger.error(f"Agent 创建失败: {e}")
-            # 回退到简单模式
-            return cls._create_langchain_agent(llm, tools, system_prompt)
-
-    @classmethod
     def _create_langchain_agent(cls, llm, tools, system_prompt):
         """回退方案：使用 LangChain create_react_agent"""
         try:
@@ -187,9 +135,95 @@ class AgentFactory:
             return llm
 
     @classmethod
+    async def create_deep_agent_stream(
+        cls,
+        llm,
+        messages: list,
+        enable_rag: bool = True,
+    ):
+        """
+        使用 DeepAgents 创建 Agent 并流式执行，返回 (event_type, data) 异步生成器。
+        DeepAgents 内部自动处理工具调用循环（规划、子代理、文件系统），无需手动管理。
+
+        Yields:
+            ("token", str)          - 文本 token
+            ("thinking", str)       - 思考过程
+            ("tool_call", dict)     - 工具调用
+            ("tool_result", dict)   - 工具结果
+        """
+        from deepagents import create_deep_agent
+        from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, ToolMessage
+
+        # 加载技能
+        skills_loader = SkillsLoader()
+        skills = skills_loader.load_all()
+
+        # 准备工具列表
+        tools = []
+        if enable_rag and cls._rag_pipeline:
+            rag_tool = create_rag_tool(cls._rag_pipeline)
+            tools.append(rag_tool)
+            logger.info("RAG 工具已加载 (DeepAgents)")
+
+        # 加载 MCP 工具
+        mcp_tools = await cls.get_mcp_tools()
+        tools.extend(mcp_tools)
+
+        # 构建系统提示
+        system_prompt = cls._build_system_prompt(skills, enable_rag)
+
+        # 创建 DeepAgents Agent
+        agent = create_deep_agent(
+            model=llm,
+            tools=tools,
+            system_prompt=system_prompt,
+        )
+        logger.info(f"DeepAgents Agent 创建成功, 工具数: {len(tools)}")
+
+        # 确保消息列表以 system 开头
+        graph_messages = list(messages)
+
+        # 流式执行 (stream_mode="messages" 返回 (message_chunk, metadata))
+        async for event in agent.astream(
+            {"messages": graph_messages},
+            stream_mode="messages",
+        ):
+            msg_chunk, metadata = event
+
+            # 获取消息类型
+            msg_type = msg_chunk.__class__.__name__
+
+            # 处理文本 token
+            if hasattr(msg_chunk, "content") and msg_chunk.content:
+                if isinstance(msg_chunk.content, str) and msg_chunk.content:
+                    yield ("token", msg_chunk.content)
+
+            # 处理工具调用
+            if hasattr(msg_chunk, "tool_call_chunks") and msg_chunk.tool_call_chunks:
+                for tc_chunk in msg_chunk.tool_call_chunks:
+                    if tc_chunk.get("name"):
+                        yield ("thinking", f"正在调用工具: {tc_chunk['name']}...")
+                        yield ("tool_call", {
+                            "tool_name": tc_chunk["name"],
+                            "tool_input": {},
+                            "timestamp": now_iso(),
+                        })
+
+            # ToolMessage 返回工具结果
+            if isinstance(msg_chunk, ToolMessage):
+                content = msg_chunk.content
+                if isinstance(content, str):
+                    yield ("tool_result", {
+                        "tool_name": getattr(msg_chunk, "name", "tool"),
+                        "tool_output": content[:500],
+                        "timestamp": now_iso(),
+                    })
+
+    @classmethod
     def _build_system_prompt(cls, skills: list[str], enable_rag: bool) -> str:
         """构建系统提示词，包含技能描述"""
-        prompt = "你是一个智能对话助手。请友好、准确地回答用户的问题。\n\n"
+        today = now_str()
+        prompt = f"你是一个智能对话助手。请友好、准确地回答用户的问题。\n\n当前日期：{today}。当用户询问实时信息（如今日油价、天气、新闻等）时，请使用当前日期进行搜索，不要使用过时的日期。\n\n"
 
         if skills:
             prompt += "## 可用技能\n\n"

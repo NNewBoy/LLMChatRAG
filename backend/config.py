@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # MCP npx 可执行文件路径（为空时自动探测；systemd 环境找不到 npx 时可手动指定）
     npx_path: str = ""
 
+    # Agent 框架: "langchain" 或 "deepagents"
+    agent_framework: str = "langchain"
+
     # 日志
     log_level: str = "INFO"
     log_file: str = "./logs/app.log"

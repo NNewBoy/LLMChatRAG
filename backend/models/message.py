@@ -2,9 +2,9 @@
 
 import uuid
 import json
-from datetime import datetime
 from typing import Optional
 import aiosqlite
+from utils.timezone import now_iso
 
 
 async def create_message(
@@ -18,7 +18,7 @@ async def create_message(
 ) -> dict:
     """创建消息"""
     msg_id = str(uuid.uuid4())
-    now = datetime.now().isoformat()
+    now = now_iso()
     await db.execute(
         """INSERT INTO messages (id, conversation_id, role, content, thinking, tool_calls, parent_message_id, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",

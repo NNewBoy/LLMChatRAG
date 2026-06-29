@@ -1,9 +1,9 @@
 """普通对话路由 /api/chat/*"""
 
 import uuid
-from datetime import datetime
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse, JSONResponse, Response
+from utils.timezone import now_iso
 from schemas.chat import (
     ConversationCreate,
     ConversationRename,
@@ -41,7 +41,7 @@ async def list_conversations():
 async def create_conversation(req: ConversationCreate):
     """创建新会话"""
     conv_id = str(uuid.uuid4())
-    now = datetime.now().isoformat()
+    now = now_iso()
     db = await get_db()
     try:
         await db.execute(
@@ -83,7 +83,7 @@ async def rename_conversation(conversation_id: str, req: ConversationRename):
         row = await cursor.fetchone()
         if not row:
             return JSONResponse(status_code=404, content={"detail": "会话不存在"})
-        now = datetime.now().isoformat()
+        now = now_iso()
         await db.execute(
             "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?",
             (req.title, now, conversation_id),

@@ -1,8 +1,8 @@
 """RAG 完整流水线编排"""
 
 import json
-from datetime import datetime
 from typing import AsyncGenerator
+from utils.timezone import now_iso
 from rag.parser import DocumentParser
 from rag.chunker import DocumentChunker
 from rag.embedder import Embedder
@@ -119,7 +119,7 @@ class RAGPipeline:
         yield sse_event("tool_call", {
             "tool_name": "rag_search",
             "tool_input": {"query": search_query, "hybrid": enable_hybrid_search},
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": now_iso(),
         })
 
         results = await self.retriever.retrieve(
@@ -142,7 +142,7 @@ class RAGPipeline:
         yield sse_event("tool_result", {
             "tool_name": "rag_search",
             "tool_output": tool_output,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": now_iso(),
         })
 
         if not results:
@@ -188,7 +188,7 @@ class RAGPipeline:
         yield sse_event("tool_result", {
             "tool_name": "rag_sources",
             "tool_output": json.dumps(sources, ensure_ascii=False),
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": now_iso(),
         })
 
         logger.info("RAG 流水线完成")

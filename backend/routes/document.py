@@ -1,10 +1,10 @@
 """文档管理路由 /api/documents/* 和 错题集路由 /api/bad-cases/*"""
 
 import uuid
-from datetime import datetime
 from fastapi import APIRouter, UploadFile, File, Query, HTTPException
 from fastapi.responses import Response
 from typing import Optional
+from utils.timezone import now_iso
 from schemas.document import (
     DocumentResponse,
     DocumentListResponse,
@@ -44,7 +44,7 @@ async def upload_document(file: UploadFile = File(...)):
         await db.close()
 
     doc_id = str(uuid.uuid4())
-    now = datetime.now().isoformat()
+    now = now_iso()
     file_size = 0
 
     # 保存文件
@@ -173,7 +173,7 @@ async def list_bad_cases(use_as_example: Optional[int] = Query(None)):
 @router.put("/api/bad-cases/{bad_case_id}", response_model=dict)
 async def update_bad_case(bad_case_id: str, req: BadCaseUpdateRequest):
     """更新错题答案和范例标记"""
-    now = datetime.now().isoformat()
+    now = now_iso()
     db = await get_db()
     try:
         await db.execute(

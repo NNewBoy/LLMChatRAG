@@ -117,6 +117,7 @@ npm run dev
 | `RAG_CHUNK_SIZE` | 分块大小 | 512 |
 | `RAG_CHUNK_OVERLAP` | 分块重叠 | 50 |
 | `NPX_PATH` | MCP 启动用的 npx 路径（留空自动探测；systemd 找不到 npx 时填绝对路径） | （留空） |
+| `AGENT_FRAMEWORK` | Agent 框架选择：`langchain`（默认，轻量）或 `deepagents`（支持规划/子代理/文件系统） | langchain |
 
 ## 部署
 

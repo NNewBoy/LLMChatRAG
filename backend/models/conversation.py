@@ -1,11 +1,7 @@
 """会话表模型"""
 
 import uuid
-from datetime import datetime
-
-
-def now_iso() -> str:
-    return datetime.now().isoformat()
+from utils.timezone import now_iso
 
 
 async def create_conversation(db, mode: str, title: str = "") -> dict:

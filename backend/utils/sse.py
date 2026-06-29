@@ -1,12 +1,12 @@
 """SSE 事件构建工具"""
 
 import json
-from datetime import datetime
 from typing import Any
+from utils.timezone import now_iso
 
 
 def _now() -> str:
-    return datetime.now().isoformat()
+    return now_iso()
 
 
 def sse_event(event_type: str, data: dict[str, Any]) -> str:

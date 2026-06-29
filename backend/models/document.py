@@ -1,14 +1,14 @@
 """文档表数据访问层"""
 
 import uuid
-from datetime import datetime
 from typing import Optional
+from utils.timezone import now_iso
 
 
 async def create_document(db, filename: str, file_type: str, file_size: int) -> dict:
     """创建文档记录"""
     doc_id = str(uuid.uuid4())
-    now = datetime.now().isoformat()
+    now = now_iso()
     await db.execute(
         """INSERT INTO documents (id, filename, file_type, file_size, status, chunk_count, error_message, created_at)
            VALUES (?, ?, ?, ?, 'uploading', 0, NULL, ?)""",
