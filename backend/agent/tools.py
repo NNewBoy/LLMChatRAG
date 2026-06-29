@@ -1,7 +1,5 @@
-"""Agent 工具定义 - RAG 工具、联网搜索等"""
+"""Agent 工具定义 - RAG 工具"""
 
-import httpx
-from config import settings
 from utils.logger import logger
 
 
@@ -40,51 +38,3 @@ def create_rag_tool(rag_pipeline):
             return f"检索失败: {e}"
 
     return rag_search
-
-
-def create_web_search_tool():
-    """
-    创建联网搜索工具
-    使用配置的搜索引擎 API 获取实时信息
-    """
-    async def web_search(query: str, num_results: int = 5) -> str:
-        """搜索互联网获取实时信息。
-
-        Args:
-            query: 搜索关键词
-            num_results: 返回结果数量
-
-        Returns:
-            搜索结果摘要
-        """
-        logger.info(f"Agent 调用联网搜索: query='{query}'")
-
-        if not settings.search_api_url or not settings.search_api_key:
-            return "联网搜索功能未配置，请设置 SEARCH_API_URL 和 SEARCH_API_KEY。"
-
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.get(
-                    settings.search_api_url,
-                    params={"q": query, "num": num_results, "api_key": settings.search_api_key},
-                )
-                response.raise_for_status()
-                data = response.json()
-
-            results = data.get("results", [])
-            if not results:
-                return "未找到相关搜索结果。"
-
-            formatted = []
-            for i, r in enumerate(results[:num_results]):
-                title = r.get("title", "")
-                snippet = r.get("snippet", "")
-                url = r.get("url", "")
-                formatted.append(f"[{i+1}] {title}\n{snippet}\n链接: {url}")
-
-            return "\n\n".join(formatted)
-        except Exception as e:
-            logger.error(f"联网搜索失败: {e}")
-            return f"搜索失败: {e}"
-
-    return web_search

@@ -76,10 +76,23 @@ class RAGService:
                 "VALUES (?, ?, 'user', ?, ?)",
                 (user_msg_id, conversation_id, content, parent_message_id),
             )
-            await db.execute(
-                "UPDATE conversations SET updated_at = datetime('now') WHERE id = ?",
+            # 如果是第一条用户消息，用内容前50字作为会话标题
+            cursor = await db.execute(
+                "SELECT COUNT(*) as cnt FROM messages WHERE conversation_id = ? AND role = 'user'",
                 (conversation_id,),
             )
+            row = await cursor.fetchone()
+            if row["cnt"] == 1:
+                title = content[:50] + ("..." if len(content) > 50 else "")
+                await db.execute(
+                    "UPDATE conversations SET title = ?, updated_at = datetime('now') WHERE id = ?",
+                    (title, conversation_id),
+                )
+            else:
+                await db.execute(
+                    "UPDATE conversations SET updated_at = datetime('now') WHERE id = ?",
+                    (conversation_id,),
+                )
             await db.commit()
         finally:
             await db.close()

@@ -302,14 +302,132 @@ class ChatService:
                 logger.info(f"  [{i}] {m.__class__.__name__}: {content_preview}{'...' if len(str(m.content)) > 500 else ''}")
 
             logger.info("开始 LLM 流式生成...")
-            async for chunk in llm.astream(lc_messages):
+            # 加载 MCP 工具并绑定到 LLM，让 LLM 自主决定是否调用联网搜索
+            mcp_tools = await AgentFactory.get_mcp_tools()
+            if mcp_tools:
+                llm = llm.bind_tools(mcp_tools)
+                logger.info(f"已绑定 {len(mcp_tools)} 个 MCP 工具: {[t.name for t in mcp_tools]}")
+
+            # 流式生成（支持工具调用循环）
+            import json as _json
+            max_tool_rounds = 8
+            for _round in range(max_tool_rounds):
+                tool_calls_accum = []
+                current_tool_call = None
+                round_has_content = False
+
+                logger.info(f"开始第 {_round + 1} 轮流式生成, lc_messages={len(lc_messages)} 条")
+                async for chunk in llm.astream(lc_messages):
+                    if self.is_stopped(assistant_msg_id):
+                        yield sse_event("thinking", {"content": "生成已停止"})
+                        break
+                    # 处理文本 token
+                    token = chunk.content if hasattr(chunk, "content") else ""
+                    if token:
+                        full_content += token
+                        round_has_content = True
+                        yield sse_event("token", {"content": token, "message_id": assistant_msg_id})
+                    # 处理工具调用
+                    if hasattr(chunk, "tool_call_chunks") and chunk.tool_call_chunks:
+                        for tc_chunk in chunk.tool_call_chunks:
+                            if tc_chunk.get("name"):
+                                current_tool_call = {
+                                    "name": tc_chunk["name"],
+                                    "args": "",
+                                    "id": tc_chunk.get("id", ""),
+                                }
+                                tool_calls_accum.append(current_tool_call)
+                                yield sse_event("thinking", {"content": f"正在调用工具: {tc_chunk['name']}..."})
+                            if tc_chunk.get("args") and current_tool_call:
+                                current_tool_call["args"] += tc_chunk["args"]
+
                 if self.is_stopped(assistant_msg_id):
-                    yield sse_event("thinking", {"content": "生成已停止"})
                     break
-                token = chunk.content if hasattr(chunk, "content") else str(chunk)
-                if token:
-                    full_content += token
-                    yield sse_event("token", {"content": token, "message_id": assistant_msg_id})
+
+                logger.info(f"第 {_round + 1} 轮完成: has_content={round_has_content}, tool_calls={len(tool_calls_accum)}")
+
+                # 如果没有工具调用，结束循环
+                if not tool_calls_accum:
+                    break
+
+                # 解析并执行工具调用
+                import json as _json_mod
+                from langchain_core.messages import AIMessage as _AIMsg, ToolMessage
+
+                # 构建 AIMessage with tool_calls
+                parsed_tool_calls = []
+                for tc in tool_calls_accum:
+                    try:
+                        args = _json_mod.loads(tc["args"]) if tc["args"] else {}
+                    except Exception:
+                        args = {}
+                    parsed_tool_calls.append({
+                        "name": tc["name"],
+                        "args": args,
+                        "id": tc["id"],
+                    })
+                    tool_call_parts.append({
+                        "tool_name": tc["name"],
+                        "tool_input": args,
+                    })
+                    yield sse_event("tool_call", {
+                        "tool_name": tc["name"],
+                        "tool_input": args,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+
+                # 将 AI 的工具调用消息加入历史
+                lc_messages.append(_AIMsg(content=full_content, tool_calls=[
+                    {"name": tc["name"], "args": tc["args"], "id": tc["id"], "type": "tool_call"}
+                    for tc in parsed_tool_calls
+                ]))
+
+                # 执行工具并添加 ToolMessage
+                for tc in parsed_tool_calls:
+                    tool = next((t for t in mcp_tools if t.name == tc["name"]), None)
+                    if tool:
+                        try:
+                            result = await tool.ainvoke(tc["args"])
+                            # MCP 工具返回内容块列表，提取文本
+                            if isinstance(result, list):
+                                text_parts = []
+                                for block in result:
+                                    if isinstance(block, dict) and block.get("type") == "text":
+                                        text_parts.append(block.get("text", ""))
+                                    elif isinstance(block, str):
+                                        text_parts.append(block)
+                                result_text = "\n".join(text_parts) if text_parts else str(result)
+                            else:
+                                result_text = str(result)
+                            tool_output = result_text[:500]
+                            tool_call_parts.append({"tool_name": tc["name"], "tool_output": tool_output})
+                            yield sse_event("tool_result", {
+                                "tool_name": tc["name"],
+                                "tool_output": tool_output,
+                                "timestamp": datetime.now().isoformat(),
+                            })
+                            lc_messages.append(ToolMessage(content=result_text, tool_call_id=tc["id"]))
+                        except Exception as e:
+                            logger.error(f"工具执行失败 {tc['name']}: {e}")
+                            lc_messages.append(ToolMessage(content=f"工具执行失败: {e}", tool_call_id=tc["id"]))
+                    else:
+                        logger.warning(f"未找到工具: {tc['name']}")
+
+                logger.info(f"工具调用第 {_round + 1} 轮完成，继续生成...")
+                logger.info(f"当前 lc_messages 数量: {len(lc_messages)}, full_content 长度: {len(full_content)}")
+            else:
+                # 循环结束但仍有未处理的工具调用，强制最终生成（不绑定工具）
+                if tool_calls_accum:
+                    logger.info("达到最大工具调用轮数，强制最终生成...")
+                    # 重新创建无工具的 LLM 实例
+                    fresh_llm = await AgentFactory.get_llm(model)
+                    async for chunk in fresh_llm.astream(lc_messages):
+                        if self.is_stopped(assistant_msg_id):
+                            break
+                        token = chunk.content if hasattr(chunk, "content") else ""
+                        if token:
+                            full_content += token
+                            yield sse_event("token", {"content": token, "message_id": assistant_msg_id})
 
             # 保存 assistant 消息
             thinking_json = json.dumps(thinking_parts, ensure_ascii=False) if thinking_parts else None

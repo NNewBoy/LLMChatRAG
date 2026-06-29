@@ -1,10 +1,11 @@
 """Agent 工厂 - 创建 DeepAgents 实例"""
 
+import os
 from typing import Optional
 from config import settings
 from utils.logger import logger
 from agent.skills_loader import SkillsLoader
-from agent.tools import create_rag_tool, create_web_search_tool
+from agent.tools import create_rag_tool
 from agent.memory import LongTermMemory
 
 
@@ -13,12 +14,41 @@ class AgentFactory:
 
     _llm = None
     _rag_pipeline = None
+    _mcp_tools = None
 
     @classmethod
     def set_rag_pipeline(cls, rag_pipeline):
         """注入 RAG pipeline 实例"""
         cls._rag_pipeline = rag_pipeline
         logger.info("RAG pipeline 已注入 AgentFactory")
+
+    @classmethod
+    async def get_mcp_tools(cls):
+        """
+        通过 MCP 加载 Bing 联网搜索工具
+        使用 langchain-mcp-adapters 连接 bing-cn-mcp 子进程
+        """
+        if cls._mcp_tools is not None:
+            return cls._mcp_tools
+
+        try:
+            from langchain_mcp_adapters.client import MultiServerMCPClient
+
+            client = MultiServerMCPClient(
+                {
+                    "bing-search": {
+                        "transport": "stdio",
+                        "command": "cmd",
+                        "args": ["/c", "npx", "-y", "bing-cn-mcp"],
+                    }
+                }
+            )
+            cls._mcp_tools = await client.get_tools()
+            logger.info(f"MCP 工具加载成功: {[t.name for t in cls._mcp_tools]}")
+        except Exception as e:
+            logger.error(f"MCP 工具加载失败: {e}")
+            cls._mcp_tools = []
+        return cls._mcp_tools
 
     @classmethod
     async def get_llm(cls, model: str = None):
@@ -51,19 +81,18 @@ class AgentFactory:
             raise
 
     @classmethod
-    def create_agent(cls, llm, enable_rag: bool = True, enable_web_search: bool = True):
+    async def create_agent(cls, llm, enable_rag: bool = True):
         """
         创建 DeepAgents Agent 实例
 
         Args:
             llm: LangChain LLM 实例
             enable_rag: 是否加载 RAG 工具
-            enable_web_search: 是否加载联网搜索工具
 
         Returns:
             DeepAgents Agent 实例
         """
-        logger.info(f"创建 Agent: enable_rag={enable_rag}, enable_web_search={enable_web_search}")
+        logger.info(f"创建 Agent: enable_rag={enable_rag}")
 
         # 加载技能
         skills_loader = SkillsLoader()
@@ -77,10 +106,9 @@ class AgentFactory:
             tools.append(rag_tool)
             logger.info("RAG 工具已加载")
 
-        if enable_web_search:
-            web_tool = create_web_search_tool()
-            tools.append(web_tool)
-            logger.info("联网搜索工具已加载")
+        # 加载 MCP 工具（联网搜索等）
+        mcp_tools = await cls.get_mcp_tools()
+        tools.extend(mcp_tools)
 
         # 构建系统提示
         system_prompt = cls._build_system_prompt(skills, enable_rag)

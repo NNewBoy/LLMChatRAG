@@ -173,6 +173,8 @@ export const useRagStore = defineStore('rag', () => {
           onDone: (data) => {
             reactiveAssistantMsg.id = data.message_id
             isStreaming.value = false
+            // 刷新会话列表（后端在第一条消息时会自动生成标题）
+            fetchConversations()
             callbacks.onDone?.(data)
           },
           onError: (data) => {

@@ -96,7 +96,8 @@ onMounted(async () => {
 })
 
 async function handleNewChat() {
-  await store.createConversation()
+  const conv = await store.createConversation()
+  router.push(`/chat/${conv.id}`)
   sidebarVisible.value = false
 }
 

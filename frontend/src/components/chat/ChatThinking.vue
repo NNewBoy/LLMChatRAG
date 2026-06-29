@@ -4,7 +4,7 @@
       <el-collapse-item title="思考过程" name="thinking">
         <template #title>
           <div class="thinking-header">
-            <el-icon><Loading v-if="isStreaming" /></el-icon>
+            <el-icon class="loading-icon" v-if="isStreaming"><Loading /></el-icon>
             <span>思考过程</span>
           </div>
         </template>
@@ -36,7 +36,7 @@ watch(() => props.isStreaming, (val) => {
 <style scoped>
 .chat-thinking {
   margin: 8px 0;
-  background: #f8f9fa;
+  background: #ffffff;
   border-radius: 8px;
   padding: 0 12px;
 }
@@ -55,5 +55,14 @@ watch(() => props.isStreaming, (val) => {
   line-height: 1.6;
   white-space: pre-wrap;
   padding: 8px 0;
+}
+
+.loading-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

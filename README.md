@@ -7,10 +7,11 @@
 - **普通对话模式**：Agent 自动识别意图，普通问题直接回答，涉及知识库的问题自动调用 RAG 工具
 - **RAG 对话模式**：直接进入 RAG 流程，基于上传文档进行问答，支持实时调整检索策略
 - **多技能 Agent**：通过 SKILL.md 扩展 Agent 能力，DeepAgents 自主决策调用
+- **MCP 联网搜索**：通过 MCP 协议集成 bing-cn-mcp，Agent 自主决定是否调用联网搜索和网页抓取工具
 - **长期记忆**：SQLite 持久化对话历史，跨会话上下文关联
 - **流式对话**：SSE 推送，前端实时展示思考过程与工具调用，支持中途停止
 - **图片理解**：支持上传图片，多模态模型理解
-- **联网搜索**：Agent 可调用搜索引擎获取实时信息
+- **会话管理**：新建/重命名/删除会话，URL 直达特定会话 (`/chat/{id}`、`/rag/{id}`)
 - **混合检索**：向量检索 + BM25 关键词检索，加权融合
 - **重排序**：LLM 对检索结果精排，提升答案质量
 - **Bad Case 管理**：前端标记错误答案，构建错题集，支持范例回传
@@ -27,7 +28,7 @@
 ### 后端
 - Python 3.11+ + FastAPI + SQLite (aiosqlite) + FAISS
 - DeepAgents (Agent 框架) + LlamaIndex (RAG 框架)
-- LangChain (init_chat_model) + Pydantic + uvicorn
+- LangChain (init_chat_model) + langchain-mcp-adapters (MCP 工具) + Pydantic + uvicorn
 
 ## 项目结构
 
@@ -124,6 +125,7 @@ npm run dev
 | POST | `/api/chat/conversations/{id}/messages/{mid}/regenerate` | 重新生成 |
 | DELETE | `/api/chat/conversations/{id}/messages/{mid}` | 删除消息 (含对应提问) |
 | GET/POST/DELETE | `/api/rag/conversations` | RAG 对话会话管理 |
+| PUT | `/api/rag/conversations/{id}` | 重命名 RAG 会话 |
 | POST | `/api/rag/conversations/{id}/messages` | RAG 消息 (SSE 流式) |
 | POST | `/api/rag/conversations/{id}/messages/{mid}/stop` | 停止生成 |
 | POST | `/api/rag/conversations/{id}/messages/{mid}/regenerate` | 重新生成 |
@@ -137,6 +139,8 @@ npm run dev
 ## 参考文档
 
 - [DeepAgents 框架](https://docs.langchain.com/oss/python/deepagents/overview)
+- [LangChain MCP Adapters](https://docs.langchain.com/oss/python/langchain/mcp)
+- [bing-cn-mcp](https://www.modelscope.cn/mcp/servers/@tavily-ai/tavily-mcp)
 - [硅基流动 Embedding API](https://api-docs.siliconflow.cn/docs/api/embeddings-post)
 - [LangChain init_chat_model](https://python.langchain.com/docs/how_to/chat_models_universal_init/)
 - [LlamaIndex](https://docs.llamaindex.ai/)

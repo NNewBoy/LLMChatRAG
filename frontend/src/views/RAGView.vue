@@ -87,6 +87,7 @@
 
 <script setup>
 import { ref, onMounted, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Fold, Setting } from '@element-plus/icons-vue'
 import { useRagStore } from '../stores/rag'
 import { chatApi } from '../api/chat'
@@ -97,6 +98,8 @@ import SettingsDialog from '../components/common/SettingsDialog.vue'
 import AppHeader from '../components/common/AppHeader.vue'
 
 const store = useRagStore()
+const route = useRoute()
+const router = useRouter()
 
 const sidebarVisible = ref(false)
 const settingsVisible = ref(false)
@@ -140,15 +143,21 @@ onMounted(async () => {
   } catch (e) {
     console.error('获取模型列表失败:', e)
   }
+  // 从路由参数恢复会话
+  if (route.params.conversationId) {
+    await store.fetchMessages(route.params.conversationId)
+  }
 })
 
 async function handleNewChat() {
-  await store.createConversation()
+  const conv = await store.createConversation()
+  router.push(`/rag/${conv.id}`)
   sidebarVisible.value = false
 }
 
 async function handleSelect(id) {
   await store.fetchMessages(id)
+  router.push(`/rag/${id}`)
   sidebarVisible.value = false
 }
 
