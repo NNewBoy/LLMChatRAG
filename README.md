@@ -4,18 +4,20 @@
 
 ## 功能特性
 
-- **普通对话模式**：Agent 自动识别意图，普通问题直接回答，涉及知识库的问题自动调用 RAG 工具
+- **普通对话模式**：Agent 自动识别意图，普通问题直接回答，涉及知识库的问题自动调用 RAG 工具，支持 LangChain / DeepAgents 双框架切换
 - **RAG 对话模式**：直接进入 RAG 流程，基于上传文档进行问答，支持实时调整检索策略
-- **多技能 Agent**：通过 SKILL.md 扩展 Agent 能力，DeepAgents 自主决策调用
+- **多技能 Agent**：通过 SKILL.md 扩展 Agent 能力（图片分析/知识库查询/联网搜索），Agent 自主决策调用
 - **MCP 联网搜索**：通过 MCP 协议集成 bing-cn-mcp，Agent 自主决定是否调用联网搜索和网页抓取工具
+- **意图识别**：LLM 自动判断用户意图（闲聊/知识库），动态路由到 Chat 或 RAG 流程
 - **长期记忆**：SQLite 持久化对话历史，跨会话上下文关联
 - **流式对话**：SSE 推送，前端实时展示思考过程与工具调用，支持中途停止
 - **图片理解**：支持上传图片，多模态模型理解
-- **会话管理**：新建/重命名/删除会话，URL 直达特定会话 (`/chat/{id}`、`/rag/{id}`)
+- **会话管理**：新建/重命名/删除会话，URL 直达特定会话 (`/chat/{id}`、`/rag/{id}`)，支持追问和重新生成
 - **混合检索**：向量检索 + BM25 关键词检索，加权融合
 - **重排序**：LLM 对检索结果精排，提升答案质量
 - **Bad Case 管理**：前端标记错误答案，构建错题集，支持范例回传
-- **文档管理**：上传/删除文档，自动解析入库，状态追踪，重复上传检测，支持拖拽上传
+- **文档管理**：上传/删除文档，自动解析入库，状态追踪，重复上传检测，支持拖拽上传，删除时同步清理向量数据与上传文件
+- **统一时区**：全局使用 UTC+8 东八区时间，避免服务器时区差异
 - **统一配置**：Chat 和 RAG 页面均通过 header 设置弹窗统一管理模型与检索参数
 - **响应式设计**：兼容 PC 端与移动端，自适应布局
 - **UI 设计**：Glassmorphism + Dark Mode 风格，玻璃态质感，统一深色主题
@@ -28,8 +30,8 @@
 
 ### 后端
 - Python 3.11+ + FastAPI + SQLite (aiosqlite) + FAISS
-- DeepAgents (Agent 框架) + LlamaIndex (RAG 框架)
-- LangChain (init_chat_model) + langchain-mcp-adapters (MCP 工具) + Pydantic + uvicorn
+- LangChain (init_chat_model + bind_tools) / DeepAgents (create_deep_agent) — 双 Agent 框架，环境变量切换
+- LlamaIndex (RAG 框架) + langchain-mcp-adapters (MCP 联网搜索) + Pydantic + uvicorn
 
 ## 项目结构
 
@@ -40,11 +42,11 @@ LLMChatRAG/
 │   ├── config.py           # 环境变量配置
 │   ├── models/             # 数据库模型 (SQLite)
 │   ├── routes/             # API 路由 (chat/rag/document/model)
-│   ├── agent/              # Agent 模块 (DeepAgents)
-│   ├── rag/                # RAG 模块 (LlamaIndex)
-│   ├── services/           # 业务逻辑层
+│   ├── agent/              # Agent 模块 (LangChain/DeepAgents 双框架, 意图识别, MCP 工具, 技能加载)
+│   ├── rag/                # RAG 模块 (LlamaIndex: 解析/分块/嵌入/检索/生成)
+│   ├── services/           # 业务逻辑层 (chat_service/rag_service/document_service)
 │   ├── schemas/            # 请求/响应模型
-│   ├── utils/              # 工具 (SSE/Logger)
+│   ├── utils/              # 工具 (SSE/Logger/Timezone)
 │   ├── data/               # 数据存储 (SQLite/FAISS/上传文件)
 │   ├── requirements.txt
 │   └── .env.example
@@ -89,7 +91,7 @@ npm run dev
 
 ### 3. 使用说明
 
-1. **普通对话**：访问 `/chat`，点击 header 右侧设置图标选择模型、开关意图识别，输入问题即可对话。开启意图识别后，Agent 会自动判断是否需要查询知识库。
+1. **普通对话**：访问 `/chat`，点击 header 右侧设置图标选择模型、开关意图识别，输入问题即可对话。开启意图识别后，Agent 会自动判断是否需要查询知识库或联网搜索。后端通过 `AGENT_FRAMEWORK` 环境变量切换 LangChain（默认，轻量工具调用）或 DeepAgents（支持规划/子代理/文件系统）框架。
 2. **RAG 对话**：访问 `/rag`，先上传文档（在文档管理页面），然后在 RAG 对话页面基于文档提问。点击 header 右侧设置图标可调整 LLM 模型、Embedding 模型、Query 改写、混合检索、重排序等参数。
 3. **文档管理**：访问 `/documents`，上传 PDF/Word/HTML/TXT 文档，系统自动解析、分块、向量化并存入 FAISS。支持重复上传检测和删除时同步清理向量数据与上传文件。
 4. **错题集**：在 RAG 对话中标记错误答案，在文档管理页面的错题集 Tab 中编辑正确答案，可设为范例供 LLM 参考。

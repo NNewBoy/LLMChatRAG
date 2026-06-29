@@ -157,6 +157,7 @@ class AgentFactory:
         # 加载技能
         skills_loader = SkillsLoader()
         skills = skills_loader.load_all()
+        logger.info(f"DeepAgents 加载技能: {len(skills)} 个")
 
         # 准备工具列表
         tools = []
@@ -168,9 +169,11 @@ class AgentFactory:
         # 加载 MCP 工具
         mcp_tools = await cls.get_mcp_tools()
         tools.extend(mcp_tools)
+        logger.info(f"DeepAgents 工具列表: {[getattr(t, 'name', str(t)) for t in tools]}")
 
         # 构建系统提示
         system_prompt = cls._build_system_prompt(skills, enable_rag)
+        logger.info(f"DeepAgents System Prompt (前200字): {system_prompt[:200]}...")
 
         # 创建 DeepAgents Agent
         agent = create_deep_agent(
@@ -182,42 +185,63 @@ class AgentFactory:
 
         # 确保消息列表以 system 开头
         graph_messages = list(messages)
+        logger.info(f"DeepAgents 输入消息: {len(graph_messages)} 条")
+        for i, m in enumerate(graph_messages):
+            content_preview = m.content[:200] if isinstance(m.content, str) else str(m.content)[:200]
+            logger.info(f"  [{i}] {m.__class__.__name__}: {content_preview}")
+        logger.info("DeepAgents 开始流式生成...")
 
-        # 流式执行 (stream_mode="messages" 返回 (message_chunk, metadata))
-        async for event in agent.astream(
+        # 使用单次 astream 调用，同时获取 messages 和 updates 两种流
+        # stream_mode=["messages", "updates"] 返回 (mode, value) 元组
+        token_count = 0
+        update_count = 0
+        async for stream_mode, value in agent.astream(
             {"messages": graph_messages},
-            stream_mode="messages",
+            stream_mode=["messages", "updates"],
         ):
-            msg_chunk, metadata = event
+            if stream_mode == "messages":
+                msg_chunk, metadata = value
+                # 处理文本 token
+                if hasattr(msg_chunk, "content") and msg_chunk.content:
+                    if isinstance(msg_chunk.content, str) and msg_chunk.content:
+                        yield ("token", msg_chunk.content)
+                        token_count += 1
+                # AIChunk with tool_call_chunks - 立即通知工具名
+                if hasattr(msg_chunk, "tool_call_chunks") and msg_chunk.tool_call_chunks:
+                    for tc_chunk in msg_chunk.tool_call_chunks:
+                        if tc_chunk.get("name"):
+                            logger.info(f"DeepAgents 检测到工具调用: {tc_chunk['name']}")
+                            yield ("thinking", f"正在调用工具: {tc_chunk['name']}...")
 
-            # 获取消息类型
-            msg_type = msg_chunk.__class__.__name__
+            elif stream_mode == "updates":
+                # value 是 {node_name: {messages: [...]}} 格式
+                for node_name, node_data in value.items():
+                    logger.info(f"DeepAgents update: node={node_name}")
+                    messages_list = node_data.get("messages", []) if isinstance(node_data, dict) else []
+                    for m in messages_list:
+                        # AIMessage with complete tool_calls
+                        if hasattr(m, "tool_calls") and m.tool_calls:
+                            for tc in m.tool_calls:
+                                if isinstance(tc, dict) and tc.get("name"):
+                                    logger.info(f"DeepAgents 工具调用: {tc['name']}, args={tc.get('args', {})}")
+                                    yield ("tool_call", {
+                                        "tool_name": tc["name"],
+                                        "tool_input": tc.get("args", {}),
+                                        "timestamp": now_iso(),
+                                    })
+                        # ToolMessage with tool result
+                        if isinstance(m, ToolMessage):
+                            content = m.content
+                            if isinstance(content, str):
+                                logger.info(f"DeepAgents 工具结果: {getattr(m, 'name', 'tool')}, 长度={len(content)}")
+                                yield ("tool_result", {
+                                    "tool_name": getattr(m, "name", "tool"),
+                                    "tool_output": content[:500],
+                                    "timestamp": now_iso(),
+                                })
+                        update_count += 1
 
-            # 处理文本 token
-            if hasattr(msg_chunk, "content") and msg_chunk.content:
-                if isinstance(msg_chunk.content, str) and msg_chunk.content:
-                    yield ("token", msg_chunk.content)
-
-            # 处理工具调用
-            if hasattr(msg_chunk, "tool_call_chunks") and msg_chunk.tool_call_chunks:
-                for tc_chunk in msg_chunk.tool_call_chunks:
-                    if tc_chunk.get("name"):
-                        yield ("thinking", f"正在调用工具: {tc_chunk['name']}...")
-                        yield ("tool_call", {
-                            "tool_name": tc_chunk["name"],
-                            "tool_input": {},
-                            "timestamp": now_iso(),
-                        })
-
-            # ToolMessage 返回工具结果
-            if isinstance(msg_chunk, ToolMessage):
-                content = msg_chunk.content
-                if isinstance(content, str):
-                    yield ("tool_result", {
-                        "tool_name": getattr(msg_chunk, "name", "tool"),
-                        "tool_output": content[:500],
-                        "timestamp": now_iso(),
-                    })
+        logger.info(f"DeepAgents 流式生成完成, token={token_count}, update={update_count}")
 
     @classmethod
     def _build_system_prompt(cls, skills: list[str], enable_rag: bool) -> str:
