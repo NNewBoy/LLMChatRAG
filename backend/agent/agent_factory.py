@@ -43,6 +43,11 @@ class AgentFactory:
                 # 优先使用 .env 中显式配置的 NPX_PATH
                 npx_path = settings.npx_path or shutil.which("npx") or "/usr/bin/npx"
                 command, args = npx_path, ["-y", "bing-cn-mcp"]
+                # npx 是脚本，内部通过 /usr/bin/env node 调用 node；
+                # systemd 环境 PATH 可能不含 node，把 npx 所在目录加入 PATH，让子进程能找到 node
+                node_bin_dir = os.path.dirname(npx_path)
+                if node_bin_dir and node_bin_dir not in os.environ.get("PATH", ""):
+                    os.environ["PATH"] = node_bin_dir + os.pathsep + os.environ.get("PATH", "")
 
             client = MultiServerMCPClient(
                 {
