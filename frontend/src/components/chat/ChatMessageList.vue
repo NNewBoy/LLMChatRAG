@@ -1,7 +1,7 @@
 <template>
   <div class="chat-message-list" ref="containerRef">
     <div v-if="messages.length === 0" class="empty-state">
-      <el-empty description="开始一段新对话" />
+      <el-empty :description="emptyText" />
     </div>
     <template v-else>
       <ChatMessage
@@ -9,9 +9,11 @@
         :key="msg.id || index"
         :message="msg"
         :is-streaming="isStreaming && index === messages.length - 1"
+        :show-feedback="showFeedback"
         @regenerate="$emit('regenerate', $event)"
         @followup="$emit('followup', $event)"
         @delete="$emit('delete', $event)"
+        @feedback="$emit('feedback', $event)"
       />
     </template>
   </div>
@@ -24,9 +26,11 @@ import ChatMessage from './ChatMessage.vue'
 const props = defineProps({
   messages: { type: Array, default: () => [] },
   isStreaming: { type: Boolean, default: false },
+  showFeedback: { type: Boolean, default: false },
+  emptyText: { type: String, default: '开始一段新对话' },
 })
 
-defineEmits(['regenerate', 'followup', 'delete'])
+defineEmits(['regenerate', 'followup', 'delete', 'feedback'])
 
 const containerRef = ref(null)
 
@@ -54,6 +58,8 @@ watch(
 watch(() => props.isStreaming, (val) => {
   if (!val) scrollToBottom()
 })
+
+defineExpose({ scrollToBottom })
 </script>
 
 <style scoped>

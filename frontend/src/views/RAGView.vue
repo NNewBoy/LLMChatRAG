@@ -13,7 +13,8 @@
     <div class="rag-body">
       <!-- 侧边栏 -->
       <div class="sidebar-pc">
-        <RAGChatSidebar
+        <ChatSidebar
+          mode="rag"
           :conversations="store.conversations"
           :current-id="store.currentConversationId"
           @new-chat="handleNewChat"
@@ -37,26 +38,21 @@
       <!-- 对话区 -->
       <div class="rag-main">
         <!-- 消息列表 -->
-        <div class="message-list-container" ref="messageListRef">
-          <div v-if="store.messages.length === 0" class="empty-state">
-            <el-empty description="开始 RAG 对话，基于上传文档进行问答" />
-          </div>
-          <div v-else class="messages">
-            <template v-for="(msg, index) in store.messages" :key="msg.id || index">
-              <RAGChatMessage
-                :message="msg"
-                :is-streaming="store.isStreaming && index === store.messages.length - 1"
-                @regenerate="handleRegenerate"
-                @followup="handleFollowup"
-                @delete="store.deleteMessage"
-                @feedback="handleFeedback"
-              />
-            </template>
-          </div>
-        </div>
+        <ChatMessageList
+          ref="messageListRef"
+          :messages="store.messages"
+          :is-streaming="store.isStreaming"
+          :show-feedback="true"
+          empty-text="开始 RAG 对话，基于上传文档进行问答"
+          @regenerate="handleRegenerate"
+          @followup="handleFollowup"
+          @delete="store.deleteMessage"
+          @feedback="handleFeedback"
+        />
 
         <!-- 输入区 -->
-        <RAGChatInput
+        <ChatInput
+          mode="rag"
           :is-streaming="store.isStreaming"
           @send="handleSend"
           @stop="store.stopGeneration"
@@ -86,14 +82,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Fold, Setting } from '@element-plus/icons-vue'
 import { useRagStore } from '../stores/rag'
 import { chatApi } from '../api/chat'
-import RAGChatSidebar from '../components/rag/RAGChatSidebar.vue'
-import RAGChatMessage from '../components/rag/RAGChatMessage.vue'
-import RAGChatInput from '../components/rag/RAGChatInput.vue'
+import ChatSidebar from '../components/chat/ChatSidebar.vue'
+import ChatMessageList from '../components/chat/ChatMessageList.vue'
+import ChatInput from '../components/chat/ChatInput.vue'
 import SettingsDialog from '../components/common/SettingsDialog.vue'
 import AppHeader from '../components/common/AppHeader.vue'
 
@@ -106,31 +102,6 @@ const settingsVisible = ref(false)
 const currentMode = ref('rag')
 const llmModels = ref([])
 const messageListRef = ref(null)
-
-// 自动滚动到底部
-function scrollToBottom() {
-  nextTick(() => {
-    if (messageListRef.value) {
-      messageListRef.value.scrollTop = messageListRef.value.scrollHeight
-    }
-  })
-}
-
-// 消息数量变化时滚动
-watch(() => store.messages.length, scrollToBottom)
-// 流式输出期间，最后一条消息内容变化时也滚动
-watch(
-  () => store.messages[store.messages.length - 1]?.content,
-  scrollToBottom
-)
-watch(
-  () => store.messages[store.messages.length - 1]?.thinking,
-  scrollToBottom
-)
-// 流式结束后操作按钮出现，需要滚动露出
-watch(() => store.isStreaming, (val) => {
-  if (!val) scrollToBottom()
-})
 
 onMounted(async () => {
   await store.fetchModels()
@@ -193,6 +164,8 @@ function handleFeedback({ id, isCorrect }) {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  position: relative;
+  z-index: 1;
 }
 
 .rag-body {
@@ -203,8 +176,10 @@ function handleFeedback({ id, isCorrect }) {
 
 .sidebar-pc {
   width: 280px;
-  border-right: 1px solid #e4e7ed;
-  background: #fafafa;
+  border-right: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+  background: var(--glass-bg, rgba(255,255,255,0.06));
+  backdrop-filter: blur(var(--glass-blur, 20px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
 }
 
 .rag-main {

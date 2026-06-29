@@ -36,8 +36,9 @@ watch(() => props.isStreaming, (val) => {
 <style scoped>
 .chat-thinking {
   margin: 8px 0;
-  background: #ffffff;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+  border-radius: var(--radius-md, 12px);
   padding: 0 12px;
 }
 
@@ -46,12 +47,12 @@ watch(() => props.isStreaming, (val) => {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #909399;
+  color: var(--text-muted, #94a3b8);
 }
 
 .thinking-content {
   font-size: 13px;
-  color: #606266;
+  color: var(--text-secondary, #cbd5e1);
   line-height: 1.6;
   white-space: pre-wrap;
   padding: 8px 0;

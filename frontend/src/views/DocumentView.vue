@@ -108,7 +108,9 @@ async function handleUpdateBadCase({ id, correct_answer, use_as_example }) {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
-  background: #f5f7fa;
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .document-tabs {

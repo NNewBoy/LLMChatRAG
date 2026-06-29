@@ -122,7 +122,8 @@ const isWaiting = computed(() =>
 }
 
 .chat-message.is-user .message-content {
-  background: #ecf5ff;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: 12px 12px 2px 12px;
   padding: 10px 14px;
   display: inline-block;
@@ -141,7 +142,7 @@ const isWaiting = computed(() =>
 .message-content {
   font-size: 14px;
   line-height: 1.7;
-  color: #303133;
+  color: var(--text-primary, #f8fafc);
   word-break: break-word;
 }
 
@@ -150,7 +151,7 @@ const isWaiting = computed(() =>
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #909399;
+  color: var(--text-muted, #94a3b8);
   padding: 4px 0;
 }
 
@@ -165,14 +166,15 @@ const isWaiting = computed(() =>
 }
 
 .message-content :deep(pre) {
-  background: #f5f7fa;
-  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+  border-radius: var(--radius-md, 12px);
   padding: 12px;
   overflow-x: auto;
 }
 
 .message-content :deep(code) {
-  font-family: 'Courier New', monospace;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
   font-size: 13px;
 }
 

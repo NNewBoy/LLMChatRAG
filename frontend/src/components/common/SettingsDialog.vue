@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" title="配置" width="480px" :close-on-click-modal="true" append-to-body>
+  <el-dialog v-model="visible" title="配置" :width="dialogWidth" :close-on-click-modal="true" append-to-body>
     <div class="settings-content">
       <!-- LLM 模型选择 -->
       <div class="config-section">
@@ -77,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -112,6 +112,19 @@ const localQueryRewriting = ref(props.queryRewriting)
 const localHybridSearch = ref(props.hybridSearch)
 const localReranking = ref(props.reranking)
 
+// 响应式弹窗宽度
+const windowWidth = ref(window.innerWidth)
+const dialogWidth = computed(() => {
+  return windowWidth.value < 768 ? '92%' : '480px'
+})
+
+function updateWidth() {
+  windowWidth.value = window.innerWidth
+}
+
+onMounted(() => window.addEventListener('resize', updateWidth))
+onUnmounted(() => window.removeEventListener('resize', updateWidth))
+
 watch(() => props.modelValue, (val) => { visible.value = val })
 watch(visible, (val) => { emit('update:modelValue', val) })
 
@@ -139,7 +152,7 @@ watch(() => props.reranking, (val) => { localReranking.value = val })
 .config-label {
   font-size: 14px;
   font-weight: 500;
-  color: #303133;
+  color: var(--text-primary, #f8fafc);
 }
 
 .toggle-row {
@@ -147,12 +160,12 @@ watch(() => props.reranking, (val) => { localReranking.value = val })
   justify-content: space-between;
   align-items: center;
   font-size: 14px;
-  color: #606266;
+  color: var(--text-secondary, #cbd5e1);
 }
 
 .toggle-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-muted, #94a3b8);
   margin: 4px 0 0;
   max-width: 320px;
 }

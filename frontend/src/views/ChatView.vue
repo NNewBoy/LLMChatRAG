@@ -138,6 +138,8 @@ function handleFollowup(messageId) {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  position: relative;
+  z-index: 1;
 }
 
 .chat-body {
@@ -148,8 +150,10 @@ function handleFollowup(messageId) {
 
 .sidebar-pc {
   width: 280px;
-  border-right: 1px solid #e4e7ed;
-  background: #fafafa;
+  border-right: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+  background: var(--glass-bg, rgba(255,255,255,0.06));
+  backdrop-filter: blur(var(--glass-blur, 20px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
 }
 
 .chat-main {

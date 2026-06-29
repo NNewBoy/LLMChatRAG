@@ -58,4 +58,4 @@
 3、写一个README.md说明文档
 
 ##三
-继续完成Phase 2: DeepAgents LLM 集成，使用Claude Code生成代码
+参考这个Glassmorphism + Dark Mode风格的css主题，重构前端UI为Glassmorphism + Dark Mode风格，注意：需要兼容PC端和移动端
