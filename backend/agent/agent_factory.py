@@ -34,12 +34,18 @@ class AgentFactory:
         try:
             from langchain_mcp_adapters.client import MultiServerMCPClient
 
+            # 跨平台兼容: Windows 需通过 cmd /c 启动 npx，Linux/macOS 直接调用 npx
+            if os.name == "nt":
+                command, args = "cmd", ["/c", "npx", "-y", "bing-cn-mcp"]
+            else:
+                command, args = "npx", ["-y", "bing-cn-mcp"]
+
             client = MultiServerMCPClient(
                 {
                     "bing-search": {
                         "transport": "stdio",
-                        "command": "cmd",
-                        "args": ["/c", "npx", "-y", "bing-cn-mcp"],
+                        "command": command,
+                        "args": args,
                     }
                 }
             )
