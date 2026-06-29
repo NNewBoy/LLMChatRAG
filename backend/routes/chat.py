@@ -155,6 +155,7 @@ async def regenerate_message(conversation_id: str, message_id: str, req: Regener
             conversation_id=conversation_id,
             message_id=message_id,
             model=req.model,
+            enable_intent_recognition=req.enable_intent_recognition,
         ):
             yield event
 

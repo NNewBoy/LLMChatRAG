@@ -16,6 +16,7 @@ from schemas.chat import (
     RegenerateRequest,
     StopResponse,
 )
+from schemas.rag import RAGRegenerateRequest
 from models.database import get_db
 from services.rag_service import rag_service
 from utils.logger import logger
@@ -164,7 +165,7 @@ async def stop_generation(conversation_id: str, message_id: str):
 
 
 @router.post("/conversations/{conversation_id}/messages/{message_id}/regenerate")
-async def regenerate_message(conversation_id: str, message_id: str, req: RegenerateRequest):
+async def regenerate_message(conversation_id: str, message_id: str, req: RAGRegenerateRequest):
     """重新生成 RAG 回答 (SSE 流式)"""
     async def event_stream():
         # 查询被重新生成的消息，获取原始问题和父消息 ID
@@ -213,6 +214,10 @@ async def regenerate_message(conversation_id: str, message_id: str, req: Regener
             content=content,
             model=req.model,
             parent_message_id=parent_id,
+            embedding_model=req.embedding_model,
+            enable_query_rewriting=req.enable_query_rewriting,
+            enable_hybrid_search=req.enable_hybrid_search,
+            enable_reranking=req.enable_reranking,
         ):
             yield event
 

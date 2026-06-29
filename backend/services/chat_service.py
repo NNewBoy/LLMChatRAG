@@ -482,7 +482,8 @@ class ChatService:
             self._active_generations.pop(assistant_msg_id, None)
 
     async def regenerate_stream(
-        self, conversation_id: str, message_id: str, model: str
+        self, conversation_id: str, message_id: str, model: str,
+        enable_intent_recognition: bool = True,
     ) -> AsyncGenerator[str, None]:
         """重新生成回答"""
         # 获取被重新生成的消息
@@ -524,7 +525,7 @@ class ChatService:
         async for event in self.chat_stream(
             conversation_id, content, model,
             parent_message_id=parent_id,
-            enable_intent_recognition=True,
+            enable_intent_recognition=enable_intent_recognition,
         ):
             yield event
 

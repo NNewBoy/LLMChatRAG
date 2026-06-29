@@ -51,6 +51,7 @@ class ChatMessageRequest(BaseModel):
 
 class RegenerateRequest(BaseModel):
     model: str
+    enable_intent_recognition: bool = True
 
 
 class StopResponse(BaseModel):

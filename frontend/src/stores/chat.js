@@ -232,7 +232,7 @@ export const useChatStore = defineStore('chat', () => {
       await chatApi.regenerateMessageStream(
         currentConversationId.value,
         messageId,
-        { model: selectedModel.value },
+        { model: selectedModel.value, enable_intent_recognition: enableIntentRecognition.value },
         {
           onThinking: (data) => {
             reactiveMsg.thinking += (reactiveMsg.thinking ? '\n' : '') + data.content

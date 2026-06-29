@@ -244,7 +244,13 @@ export const useRagStore = defineStore('rag', () => {
       await ragApi.regenerateMessageStream(
         currentConversationId.value,
         messageId,
-        { model: selectedModel.value },
+        {
+          model: selectedModel.value,
+          embedding_model: selectedEmbeddingModel.value,
+          enable_query_rewriting: enableQueryRewriting.value,
+          enable_hybrid_search: enableHybridSearch.value,
+          enable_reranking: enableReranking.value,
+        },
         {
           onThinking: (data) => {
             reactiveMsg.thinking += (reactiveMsg.thinking ? '\n' : '') + data.content
