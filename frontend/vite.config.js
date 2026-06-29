@@ -3,12 +3,14 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [vue()],
+  base: '/llmchatrag/',
   server: {
     port: 5176,
     proxy: {
-      '/api': {
+      '/llmchatrag/api': {
         target: 'http://localhost:8003',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/llmchatrag/, ''),
       }
     }
   },

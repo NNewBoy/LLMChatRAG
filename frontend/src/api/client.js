@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: `${import.meta.env.BASE_URL}api`,
   timeout: 30000,
 })
 
@@ -19,7 +19,7 @@ const apiClient = axios.create({
  * @param {function} [callbacks.onError] - 错误回调
  */
 export async function streamChat(url, body, callbacks = {}) {
-  const response = await fetch(`/api${url}`, {
+  const response = await fetch(`${import.meta.env.BASE_URL}api${url}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
