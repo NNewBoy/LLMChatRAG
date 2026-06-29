@@ -1,22 +1,14 @@
 <template>
   <div class="chat-view">
     <!-- 顶部导航栏 -->
-    <div class="app-header">
-      <div class="header-left">
+    <AppHeader :current-mode="currentMode" title="LLMChatRAG">
+      <template #left>
         <el-button class="menu-btn" :icon="Fold" text @click="sidebarVisible = true" />
-        <span class="app-title">LLMChatRAG</span>
-      </div>
-      <div class="header-nav">
-        <el-radio-group v-model="currentMode" @change="switchMode">
-          <el-radio-button label="chat">普通对话</el-radio-button>
-          <el-radio-button label="rag">RAG 对话</el-radio-button>
-          <el-radio-button label="documents">文档管理</el-radio-button>
-        </el-radio-group>
-      </div>
-      <div class="header-right">
+      </template>
+      <template #right>
         <el-button :icon="Setting" text @click="settingsVisible = true" title="配置" />
-      </div>
-    </div>
+      </template>
+    </AppHeader>
 
     <div class="chat-body">
       <!-- 侧边栏 (PC 端固定，移动端抽屉) -->
@@ -27,6 +19,7 @@
           @new-chat="handleNewChat"
           @select="handleSelect"
           @delete="store.deleteConversation"
+          @rename="handleRename"
         />
       </div>
 
@@ -37,6 +30,7 @@
           @new-chat="handleNewChat"
           @select="handleSelect"
           @delete="store.deleteConversation"
+          @rename="handleRename"
         />
       </el-drawer>
 
@@ -82,6 +76,7 @@ import ChatSidebar from '../components/chat/ChatSidebar.vue'
 import ChatMessageList from '../components/chat/ChatMessageList.vue'
 import ChatInput from '../components/chat/ChatInput.vue'
 import SettingsDialog from '../components/common/SettingsDialog.vue'
+import AppHeader from '../components/common/AppHeader.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -100,14 +95,6 @@ onMounted(async () => {
   }
 })
 
-function switchMode(mode) {
-  if (mode === 'rag') {
-    router.push('/rag')
-  } else if (mode === 'documents') {
-    router.push('/documents')
-  }
-}
-
 async function handleNewChat() {
   await store.createConversation()
   sidebarVisible.value = false
@@ -117,6 +104,10 @@ async function handleSelect(id) {
   await store.fetchMessages(id)
   router.push(`/chat/${id}`)
   sidebarVisible.value = false
+}
+
+function handleRename({ id, title }) {
+  store.renameConversation(id, title)
 }
 
 function handleSend({ content, image }) {
@@ -148,32 +139,6 @@ function handleFollowup(messageId) {
   height: 100vh;
 }
 
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  height: 56px;
-  border-bottom: 1px solid #e4e7ed;
-  background: #fff;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.app-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.menu-btn {
-  display: none;
-}
-
 .chat-body {
   flex: 1;
   display: flex;
@@ -194,15 +159,8 @@ function handleFollowup(messageId) {
 }
 
 @media (max-width: 768px) {
-  .menu-btn {
-    display: inline-flex;
-  }
   .sidebar-pc {
     display: none;
-  }
-  .header-nav :deep(.el-radio-button__inner) {
-    padding: 8px 12px;
-    font-size: 13px;
   }
 }
 </style>

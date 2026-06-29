@@ -15,14 +15,40 @@
           @click="$emit('select', conv.id)"
         >
           <el-icon><Document /></el-icon>
-          <span class="conv-title">{{ conv.title || 'RAG 对话' }}</span>
-          <el-button
-            class="delete-btn"
-            text
-            size="small"
-            :icon="Delete"
-            @click.stop="$emit('delete', conv.id)"
+          <input
+            v-if="editingId === conv.id"
+            :ref="(el) => editInputEl = el"
+            v-model="editTitle"
+            class="edit-input"
+            @click.stop
+            @keyup.enter="confirmRename(conv.id)"
+            @keyup.esc="cancelRename"
           />
+          <span v-else class="conv-title">{{ conv.title || 'RAG 对话' }}</span>
+          <div class="item-actions" v-if="editingId === conv.id">
+            <el-button text size="small" @click.stop="confirmRename(conv.id)">
+              <el-icon><Check /></el-icon>
+            </el-button>
+            <el-button text size="small" @click.stop="cancelRename">
+              <el-icon><Close /></el-icon>
+            </el-button>
+          </div>
+          <div class="item-actions" v-else>
+            <el-button
+              class="action-btn"
+              text
+              size="small"
+              :icon="Edit"
+              @click.stop="startRename(conv)"
+            />
+            <el-button
+              class="action-btn"
+              text
+              size="small"
+              :icon="Delete"
+              @click.stop="$emit('delete', conv.id)"
+            />
+          </div>
         </div>
       </div>
     </el-scrollbar>
@@ -30,14 +56,41 @@
 </template>
 
 <script setup>
-import { Plus, Document, Delete } from '@element-plus/icons-vue'
+import { ref, nextTick } from 'vue'
+import { Plus, Document, Delete, Edit, Check, Close } from '@element-plus/icons-vue'
 
 defineProps({
   conversations: { type: Array, default: () => [] },
   currentId: { type: String, default: null },
 })
 
-defineEmits(['new-chat', 'select', 'delete'])
+const emit = defineEmits(['new-chat', 'select', 'delete', 'rename'])
+
+const editingId = ref(null)
+const editTitle = ref('')
+const editInputEl = ref(null)
+
+function startRename(conv) {
+  editingId.value = conv.id
+  editTitle.value = conv.title || 'RAG 对话'
+  nextTick(() => {
+    editInputEl.value?.focus()
+    editInputEl.value?.select()
+  })
+}
+
+function cancelRename() {
+  editingId.value = null
+  editTitle.value = ''
+}
+
+function confirmRename(id) {
+  const title = editTitle.value.trim()
+  if (title) {
+    emit('rename', { id, title })
+  }
+  cancelRename()
+}
 </script>
 
 <style scoped>
@@ -84,12 +137,27 @@ defineEmits(['new-chat', 'select', 'delete'])
   font-size: 14px;
 }
 
-.delete-btn {
+.edit-input {
+  flex: 1;
+  font-size: 14px;
+  border: 1px solid #409eff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+  background: #fff;
+}
+
+.item-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.action-btn {
   opacity: 0;
   transition: opacity 0.2s;
 }
 
-.conversation-item:hover .delete-btn {
+.conversation-item:hover .action-btn {
   opacity: 1;
 }
 </style>

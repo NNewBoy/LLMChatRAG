@@ -1,19 +1,7 @@
 <template>
   <div class="document-view">
     <!-- 顶部导航栏 -->
-    <div class="app-header">
-      <div class="header-left">
-        <span class="app-title">文档管理 & 错题集</span>
-      </div>
-      <div class="header-nav">
-        <el-radio-group v-model="currentMode" @change="switchMode">
-          <el-radio-button label="chat">普通对话</el-radio-button>
-          <el-radio-button label="rag">RAG 对话</el-radio-button>
-          <el-radio-button label="documents">文档管理</el-radio-button>
-        </el-radio-group>
-      </div>
-      <div class="header-right"></div>
-    </div>
+    <AppHeader :current-mode="currentMode" title="文档管理 & 错题集" />
 
     <div class="document-body">
       <el-tabs v-model="activeTab" class="document-tabs">
@@ -53,14 +41,13 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useDocumentStore } from '../stores/document'
 import DocumentUpload from '../components/document/DocumentUpload.vue'
 import DocumentList from '../components/document/DocumentList.vue'
 import BadCaseEditor from '../components/rag/BadCaseEditor.vue'
+import AppHeader from '../components/common/AppHeader.vue'
 
-const router = useRouter()
 const docStore = useDocumentStore()
 
 const currentMode = ref('documents')
@@ -70,14 +57,6 @@ onMounted(async () => {
   await docStore.fetchDocuments()
   await docStore.fetchBadCases()
 })
-
-function switchMode(mode) {
-  if (mode === 'chat') {
-    router.push('/chat')
-  } else if (mode === 'rag') {
-    router.push('/rag')
-  }
-}
 
 async function handleUpload(file) {
   try {
@@ -125,22 +104,6 @@ async function handleUpdateBadCase({ id, correct_answer, use_as_example }) {
   height: 100vh;
 }
 
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  height: 56px;
-  border-bottom: 1px solid #e4e7ed;
-  background: #fff;
-}
-
-.app-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
 .document-body {
   flex: 1;
   overflow-y: auto;
@@ -164,10 +127,6 @@ async function handleUpdateBadCase({ id, correct_answer, use_as_example }) {
 @media (max-width: 768px) {
   .document-body {
     padding: 12px;
-  }
-  .header-nav :deep(.el-radio-button__inner) {
-    padding: 8px 12px;
-    font-size: 13px;
   }
 }
 </style>

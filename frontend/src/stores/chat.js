@@ -9,7 +9,7 @@ export const useChatStore = defineStore('chat', () => {
   const isStreaming = ref(false)
   const selectedModel = ref('glm-5.2')
   const availableModels = ref([])
-  const enableIntentRecognition = ref(true)
+  const enableIntentRecognition = ref(false)
 
   // 获取可用 LLM 模型列表
   async function fetchModels() {
@@ -56,6 +56,18 @@ export const useChatStore = defineStore('chat', () => {
       }
     } catch (e) {
       console.error('删除会话失败:', e)
+    }
+  }
+
+  // 重命名会话
+  async function renameConversation(id, title) {
+    try {
+      await chatApi.renameConversation(id, title)
+      const conv = conversations.value.find(c => c.id === id)
+      if (conv) conv.title = title
+    } catch (e) {
+      console.error('重命名会话失败:', e)
+      throw e
     }
   }
 
@@ -262,6 +274,7 @@ export const useChatStore = defineStore('chat', () => {
     fetchConversations,
     createConversation,
     deleteConversation,
+    renameConversation,
     fetchMessages,
     sendMessage,
     stopGeneration,

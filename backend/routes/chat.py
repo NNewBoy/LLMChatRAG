@@ -6,6 +6,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse, JSONResponse, Response
 from schemas.chat import (
     ConversationCreate,
+    ConversationRename,
     ConversationResponse,
     ConversationListResponse,
     MessageResponse,
@@ -71,6 +72,31 @@ async def delete_conversation(conversation_id: str):
     finally:
         await db.close()
     return Response(status_code=204)
+
+
+@router.put("/conversations/{conversation_id}", response_model=dict)
+async def rename_conversation(conversation_id: str, req: ConversationRename):
+    """重命名会话"""
+    db = await get_db()
+    try:
+        cursor = await db.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+        row = await cursor.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"detail": "会话不存在"})
+        now = datetime.now().isoformat()
+        await db.execute(
+            "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?",
+            (req.title, now, conversation_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {
+        "conversation": ConversationResponse(
+            id=conversation_id, title=req.title, mode="chat",
+            created_at=row["created_at"], updated_at=now,
+        ).model_dump()
+    }
 
 
 @router.get("/conversations/{conversation_id}/messages", response_model=MessageListResponse)

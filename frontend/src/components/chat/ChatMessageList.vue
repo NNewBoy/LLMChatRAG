@@ -39,7 +39,21 @@ function scrollToBottom() {
   })
 }
 
-watch(() => props.messages, scrollToBottom, { deep: true })
+// 消息数量变化时滚动
+watch(() => props.messages.length, scrollToBottom)
+// 流式输出期间，最后一条消息内容变化时也滚动
+watch(
+  () => props.messages[props.messages.length - 1]?.content,
+  scrollToBottom
+)
+watch(
+  () => props.messages[props.messages.length - 1]?.thinking,
+  scrollToBottom
+)
+// 流式结束后操作按钮出现，需要滚动露出
+watch(() => props.isStreaming, (val) => {
+  if (!val) scrollToBottom()
+})
 </script>
 
 <style scoped>

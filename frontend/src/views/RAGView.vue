@@ -1,22 +1,14 @@
 <template>
   <div class="rag-view">
     <!-- 顶部导航栏 -->
-    <div class="app-header">
-      <div class="header-left">
+    <AppHeader :current-mode="currentMode" title="LLMChatRAG - RAG 对话">
+      <template #left>
         <el-button class="menu-btn" :icon="Fold" text @click="sidebarVisible = true" />
-        <span class="app-title">LLMChatRAG - RAG 对话</span>
-      </div>
-      <div class="header-nav">
-        <el-radio-group v-model="currentMode" @change="switchMode">
-          <el-radio-button label="chat">普通对话</el-radio-button>
-          <el-radio-button label="rag">RAG 对话</el-radio-button>
-          <el-radio-button label="documents">文档管理</el-radio-button>
-        </el-radio-group>
-      </div>
-      <div class="header-right">
+      </template>
+      <template #right>
         <el-button :icon="Setting" text @click="settingsVisible = true" title="配置" />
-      </div>
-    </div>
+      </template>
+    </AppHeader>
 
     <div class="rag-body">
       <!-- 侧边栏 -->
@@ -27,6 +19,7 @@
           @new-chat="handleNewChat"
           @select="handleSelect"
           @delete="store.deleteConversation"
+          @rename="handleRename"
         />
       </div>
 
@@ -37,13 +30,14 @@
           @new-chat="handleNewChat"
           @select="handleSelect"
           @delete="store.deleteConversation"
+          @rename="handleRename"
         />
       </el-drawer>
 
       <!-- 对话区 -->
       <div class="rag-main">
         <!-- 消息列表 -->
-        <div class="message-list-container">
+        <div class="message-list-container" ref="messageListRef">
           <div v-if="store.messages.length === 0" class="empty-state">
             <el-empty description="开始 RAG 对话，基于上传文档进行问答" />
           </div>
@@ -92,8 +86,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import { Fold, Setting } from '@element-plus/icons-vue'
 import { useRagStore } from '../stores/rag'
 import { chatApi } from '../api/chat'
@@ -101,14 +94,40 @@ import RAGChatSidebar from '../components/rag/RAGChatSidebar.vue'
 import RAGChatMessage from '../components/rag/RAGChatMessage.vue'
 import RAGChatInput from '../components/rag/RAGChatInput.vue'
 import SettingsDialog from '../components/common/SettingsDialog.vue'
+import AppHeader from '../components/common/AppHeader.vue'
 
-const router = useRouter()
 const store = useRagStore()
 
 const sidebarVisible = ref(false)
 const settingsVisible = ref(false)
 const currentMode = ref('rag')
 const llmModels = ref([])
+const messageListRef = ref(null)
+
+// 自动滚动到底部
+function scrollToBottom() {
+  nextTick(() => {
+    if (messageListRef.value) {
+      messageListRef.value.scrollTop = messageListRef.value.scrollHeight
+    }
+  })
+}
+
+// 消息数量变化时滚动
+watch(() => store.messages.length, scrollToBottom)
+// 流式输出期间，最后一条消息内容变化时也滚动
+watch(
+  () => store.messages[store.messages.length - 1]?.content,
+  scrollToBottom
+)
+watch(
+  () => store.messages[store.messages.length - 1]?.thinking,
+  scrollToBottom
+)
+// 流式结束后操作按钮出现，需要滚动露出
+watch(() => store.isStreaming, (val) => {
+  if (!val) scrollToBottom()
+})
 
 onMounted(async () => {
   await store.fetchModels()
@@ -123,14 +142,6 @@ onMounted(async () => {
   }
 })
 
-function switchMode(mode) {
-  if (mode === 'chat') {
-    router.push('/chat')
-  } else if (mode === 'documents') {
-    router.push('/documents')
-  }
-}
-
 async function handleNewChat() {
   await store.createConversation()
   sidebarVisible.value = false
@@ -139,6 +150,10 @@ async function handleNewChat() {
 async function handleSelect(id) {
   await store.fetchMessages(id)
   sidebarVisible.value = false
+}
+
+function handleRename({ id, title }) {
+  store.renameConversation(id, title)
 }
 
 function handleSend(content) {
@@ -169,32 +184,6 @@ function handleFeedback({ id, isCorrect }) {
   display: flex;
   flex-direction: column;
   height: 100vh;
-}
-
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  height: 56px;
-  border-bottom: 1px solid #e4e7ed;
-  background: #fff;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.app-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.menu-btn {
-  display: none;
 }
 
 .rag-body {
@@ -235,15 +224,8 @@ function handleFeedback({ id, isCorrect }) {
 }
 
 @media (max-width: 768px) {
-  .menu-btn {
-    display: inline-flex;
-  }
   .sidebar-pc {
     display: none;
-  }
-  .header-nav :deep(.el-radio-button__inner) {
-    padding: 8px 12px;
-    font-size: 13px;
   }
   .message-list-container {
     padding: 0 12px;

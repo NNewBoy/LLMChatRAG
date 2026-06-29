@@ -21,6 +21,11 @@ export const chatApi = {
     return apiClient.delete(`/chat/conversations/${id}`)
   },
 
+  // 重命名会话
+  renameConversation(id, title) {
+    return apiClient.put(`/chat/conversations/${id}`, { title })
+  },
+
   // 获取会话消息历史
   getMessages(conversationId) {
     return apiClient.get(`/chat/conversations/${conversationId}/messages`)

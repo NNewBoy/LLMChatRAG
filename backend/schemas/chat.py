@@ -10,6 +10,10 @@ class ConversationCreate(BaseModel):
     title: str = ""
 
 
+class ConversationRename(BaseModel):
+    title: str = Field(..., min_length=1, max_length=100)
+
+
 class ConversationResponse(BaseModel):
     id: str
     title: str

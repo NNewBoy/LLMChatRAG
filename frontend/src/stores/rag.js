@@ -12,8 +12,8 @@ export const useRagStore = defineStore('rag', () => {
   // RAG 运行时配置
   const selectedEmbeddingModel = ref('BAAI/bge-m3')
   const availableEmbeddingModels = ref([])
-  const enableQueryRewriting = ref(true)
-  const enableHybridSearch = ref(false)
+  const enableQueryRewriting = ref(false)
+  const enableHybridSearch = ref(true)
   const enableReranking = ref(false)
 
   // 获取可用 Embedding 模型列表
@@ -74,6 +74,18 @@ export const useRagStore = defineStore('rag', () => {
       }
     } catch (e) {
       console.error('删除会话失败:', e)
+    }
+  }
+
+  // 重命名会话
+  async function renameConversation(id, title) {
+    try {
+      await ragApi.renameConversation(id, title)
+      const conv = conversations.value.find(c => c.id === id)
+      if (conv) conv.title = title
+    } catch (e) {
+      console.error('重命名会话失败:', e)
+      throw e
     }
   }
 
@@ -299,6 +311,7 @@ export const useRagStore = defineStore('rag', () => {
     fetchConversations,
     createConversation,
     deleteConversation,
+    renameConversation,
     fetchMessages,
     sendMessage,
     stopGeneration,

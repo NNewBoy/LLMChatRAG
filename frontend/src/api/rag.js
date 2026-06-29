@@ -21,6 +21,11 @@ export const ragApi = {
     return apiClient.delete(`/rag/conversations/${id}`)
   },
 
+  // 重命名 RAG 会话
+  renameConversation(id, title) {
+    return apiClient.put(`/rag/conversations/${id}`, { title })
+  },
+
   // 获取会话消息历史
   getMessages(conversationId) {
     return apiClient.get(`/rag/conversations/${conversationId}/messages`)

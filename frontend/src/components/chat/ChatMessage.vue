@@ -18,7 +18,11 @@
         :content="message.tool_calls"
       />
       <!-- 消息内容 -->
-      <div class="message-content" v-html="renderedContent"></div>
+      <div v-if="isWaiting" class="message-loading">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        <span>AI 正在思考...</span>
+      </div>
+      <div class="message-content" v-else v-html="renderedContent"></div>
       <!-- 操作按钮 -->
       <div class="message-actions" v-if="message.role === 'assistant' && !isStreaming">
         <el-button-group size="small">
@@ -57,7 +61,7 @@
 import { computed } from 'vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
-import { RefreshRight, ChatDotRound, Delete, Check, Close } from '@element-plus/icons-vue'
+import { RefreshRight, ChatDotRound, Delete, Check, Close, Loading } from '@element-plus/icons-vue'
 import ChatThinking from './ChatThinking.vue'
 import ChatToolCall from './ChatToolCall.vue'
 
@@ -88,6 +92,15 @@ const renderedContent = computed(() => {
     return props.message.content
   }
 })
+
+// 助手流式输出但尚未收到任何内容时，显示加载提示
+const isWaiting = computed(() =>
+  props.isStreaming &&
+  props.message.role === 'assistant' &&
+  !props.message.content &&
+  !props.message.thinking &&
+  !props.message.tool_calls
+)
 </script>
 
 <style scoped>
@@ -95,6 +108,25 @@ const renderedContent = computed(() => {
   display: flex;
   gap: 12px;
   padding: 16px 0;
+}
+
+/* 用户消息：靠右 */
+.chat-message.is-user {
+  flex-direction: row-reverse;
+}
+
+.chat-message.is-user .message-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.chat-message.is-user .message-content {
+  background: #ecf5ff;
+  border-radius: 12px 12px 2px 12px;
+  padding: 10px 14px;
+  display: inline-block;
+  max-width: 100%;
 }
 
 .message-avatar {
@@ -111,6 +143,25 @@ const renderedContent = computed(() => {
   line-height: 1.7;
   color: #303133;
   word-break: break-word;
+}
+
+.message-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #909399;
+  padding: 4px 0;
+}
+
+.message-loading .is-loading {
+  animation: rotate 1.2s linear infinite;
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .message-content :deep(pre) {
