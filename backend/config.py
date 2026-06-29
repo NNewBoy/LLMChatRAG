@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     # 联网搜索
     search_api_key: str = ""
     search_api_url: str = ""
+    # MCP npx 可执行文件路径（为空时自动探测；systemd 环境找不到 npx 时可手动指定）
+    npx_path: str = ""
 
     # 日志
     log_level: str = "INFO"

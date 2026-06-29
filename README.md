@@ -71,7 +71,7 @@ pip install -r requirements.txt
 cp .env.example .env
 # 编辑 .env 填入 API Key 等配置
 python main.py
-# 服务启动在 http://localhost:8000
+# 服务默认启动在 http://localhost:8000
 # API 文档: http://localhost:8000/docs
 ```
 
@@ -81,7 +81,8 @@ python main.py
 cd frontend
 npm install
 npm run dev
-# 开发服务器启动在 http://localhost:5173
+# 开发服务器启动在 http://localhost:5176/llmchatrag/
+# 前端已配置 base 路径 /llmchatrag/，通过 Vite 代理 /llmchatrag/api 到后端
 ```
 
 ### 3. 使用说明
@@ -113,6 +114,13 @@ npm run dev
 | `RAG_TOP_N` | 最终保留数 | 5 |
 | `RAG_CHUNK_SIZE` | 分块大小 | 512 |
 | `RAG_CHUNK_OVERLAP` | 分块重叠 | 50 |
+| `NPX_PATH` | MCP 启动用的 npx 路径（留空自动探测；systemd 找不到 npx 时填绝对路径） | （留空） |
+
+## 部署
+
+生产环境部署请参考 [DEPLOY_UBUNTU.md](./DEPLOY_UBUNTU.md)，包含 Ubuntu 服务器部署、Nginx 配置（含 SSE 流式支持）、Systemd 服务、SSL 配置等完整指南。
+
+> **部署路径**: 前端构建产物部署在 `/llmchatrag/` 子路径，Nginx 需将 `/llmchatrag/api/` 代理到后端 `/api/`。
 
 ## API 概览
 

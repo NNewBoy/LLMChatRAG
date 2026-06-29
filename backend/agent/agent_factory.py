@@ -36,11 +36,12 @@ class AgentFactory:
             from langchain_mcp_adapters.client import MultiServerMCPClient
 
             # 跨平台兼容: Windows 需通过 cmd /c 启动 npx，Linux/macOS 直接调用 npx
-            # Systemd 服务 PATH 通常仅含 venv，需用 shutil.which 解析 npx 绝对路径
+            # Systemd 服务 PATH 通常仅含 venv，需解析 npx 绝对路径
             if os.name == "nt":
                 command, args = "cmd", ["/c", "npx", "-y", "bing-cn-mcp"]
             else:
-                npx_path = shutil.which("npx") or "/usr/bin/npx"
+                # 优先使用 .env 中显式配置的 NPX_PATH
+                npx_path = settings.npx_path or shutil.which("npx") or "/usr/bin/npx"
                 command, args = npx_path, ["-y", "bing-cn-mcp"]
 
             client = MultiServerMCPClient(
@@ -55,7 +56,11 @@ class AgentFactory:
             cls._mcp_tools = await client.get_tools()
             logger.info(f"MCP 工具加载成功: {[t.name for t in cls._mcp_tools]}")
         except Exception as e:
-            logger.error(f"MCP 工具加载失败: {e}")
+            logger.error(
+                f"MCP 工具加载失败: {e} | "
+                f"npx_path={settings.npx_path or '(未配置)'} | "
+                f"PATH={os.environ.get('PATH', '(空)')}"
+            )
             cls._mcp_tools = []
         return cls._mcp_tools
 

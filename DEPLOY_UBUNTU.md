@@ -687,24 +687,30 @@ sudo chmod -R 777 /var/LLMChatRAG/backend/logs
 
 ### 8. MCP 工具加载失败（npx 找不到）
 
-日志出现 `MCP 工具加载失败: [Errno 2] No such file or directory: 'npx'`：
+日志出现 `MCP 工具加载失败: [Errno 2] No such file or directory: 'npx'` 或 `'/usr/bin/npx'`：
 
 ```bash
-# 1. 确认 Node.js 已安装且 npx 存在
+# 1. 确认 Node.js 已安装并查找 npx 实际路径
 which npx
-npx --version
+ls -la /usr/local/bin/npx /usr/bin/npx 2>/dev/null
 
-# 2. 确认 systemd 服务的 PATH 包含 /usr/bin 或 /usr/local/bin
-# 编辑 /etc/systemd/system/LLMChatRAG.service，Environment="PATH=..." 应包含系统路径：
+# 2. 修复方式 A（推荐）：在 .env 中配置 NPX_PATH 为绝对路径
+echo "NPX_PATH=$(which npx)" >> /var/LLMChatRAG/backend/.env
+# 或手动编辑: nano /var/LLMChatRAG/backend/.env  ->  NPX_PATH=/usr/local/bin/npx
+
+# 3. 修复方式 B：确保 systemd 服务的 PATH 包含 npx 所在目录
+# 编辑 /etc/systemd/system/LLMChatRAG.service:
 #   Environment="PATH=/var/LLMChatRAG/backend/venv/bin:/usr/local/bin:/usr/bin:/bin"
 
-# 3. 修改后重载并重启
+# 4. 修改后重载并重启
 sudo systemctl daemon-reload
 sudo systemctl restart LLMChatRAG
 
-# 4. 首次运行 npx 会下载 bing-cn-mcp，可能较慢，如超时可手动预热
+# 5. 首次运行 npx 会下载 bing-cn-mcp，可能较慢，可手动预热
 sudo -E npx -y bing-cn-mcp --help
 ```
+
+> **说明**: 错误日志会同时打印 `npx_path` 与 `PATH`，便于诊断。若 `shutil.which("npx")` 返回 None，说明服务进程的 PATH 中确实没有 npx，请用方式 A 显式指定路径。
 
 ---
 
