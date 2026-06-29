@@ -1,6 +1,7 @@
 """Agent 工厂 - 创建 DeepAgents 实例"""
 
 import os
+import shutil
 from typing import Optional
 from config import settings
 from utils.logger import logger
@@ -35,10 +36,12 @@ class AgentFactory:
             from langchain_mcp_adapters.client import MultiServerMCPClient
 
             # 跨平台兼容: Windows 需通过 cmd /c 启动 npx，Linux/macOS 直接调用 npx
+            # Systemd 服务 PATH 通常仅含 venv，需用 shutil.which 解析 npx 绝对路径
             if os.name == "nt":
                 command, args = "cmd", ["/c", "npx", "-y", "bing-cn-mcp"]
             else:
-                command, args = "npx", ["-y", "bing-cn-mcp"]
+                npx_path = shutil.which("npx") or "/usr/bin/npx"
+                command, args = npx_path, ["-y", "bing-cn-mcp"]
 
             client = MultiServerMCPClient(
                 {

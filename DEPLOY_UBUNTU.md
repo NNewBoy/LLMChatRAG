@@ -414,7 +414,7 @@ Type=simple
 User=root
 Group=root
 WorkingDirectory=/var/LLMChatRAG/backend
-Environment="PATH=/var/LLMChatRAG/backend/venv/bin"
+Environment="PATH=/var/LLMChatRAG/backend/venv/bin:/usr/local/bin:/usr/bin:/bin"
 EnvironmentFile=/var/LLMChatRAG/backend/.env
 ExecStart=/var/LLMChatRAG/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8003 --workers 1
 Restart=always
@@ -683,6 +683,27 @@ sudo chown -R www-data:www-data /var/www/llmchatrag
 sudo chmod -R 755 /var/LLMChatRAG
 sudo chmod -R 777 /var/LLMChatRAG/backend/data
 sudo chmod -R 777 /var/LLMChatRAG/backend/logs
+```
+
+### 8. MCP 工具加载失败（npx 找不到）
+
+日志出现 `MCP 工具加载失败: [Errno 2] No such file or directory: 'npx'`：
+
+```bash
+# 1. 确认 Node.js 已安装且 npx 存在
+which npx
+npx --version
+
+# 2. 确认 systemd 服务的 PATH 包含 /usr/bin 或 /usr/local/bin
+# 编辑 /etc/systemd/system/LLMChatRAG.service，Environment="PATH=..." 应包含系统路径：
+#   Environment="PATH=/var/LLMChatRAG/backend/venv/bin:/usr/local/bin:/usr/bin:/bin"
+
+# 3. 修改后重载并重启
+sudo systemctl daemon-reload
+sudo systemctl restart LLMChatRAG
+
+# 4. 首次运行 npx 会下载 bing-cn-mcp，可能较慢，如超时可手动预热
+sudo -E npx -y bing-cn-mcp --help
 ```
 
 ---
