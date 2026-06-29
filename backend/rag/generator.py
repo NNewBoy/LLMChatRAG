@@ -28,10 +28,9 @@ class Generator:
 
         context_text = ""
         if bad_case_examples:
-            context_text += "## 注意：以下是以往的错误答案范例，请避免类似错误：\n\n"
+            context_text += "## 以下是以往的问答范例，请参考正确答案的风格和准确度：\n\n"
             for bc in bad_case_examples:
                 context_text += f"问题: {bc.get('question', '')}\n"
-                context_text += f"错误答案: {bc.get('wrong_answer', '')}\n"
                 context_text += f"正确答案: {bc.get('correct_answer', '')}\n\n"
 
         context_text += "## 参考文档：\n\n"

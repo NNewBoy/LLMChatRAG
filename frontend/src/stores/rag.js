@@ -8,7 +8,7 @@ export const useRagStore = defineStore('rag', () => {
   const currentConversationId = ref(null)
   const messages = ref([])
   const isStreaming = ref(false)
-  const selectedModel = ref('glm-5.2')
+  const selectedModel = ref('deepseek-v4-flash')
   // RAG 运行时配置
   const selectedEmbeddingModel = ref('BAAI/bge-m3')
   const availableEmbeddingModels = ref([])

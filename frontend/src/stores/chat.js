@@ -7,7 +7,7 @@ export const useChatStore = defineStore('chat', () => {
   const currentConversationId = ref(null)
   const messages = ref([])
   const isStreaming = ref(false)
-  const selectedModel = ref('glm-5.2')
+  const selectedModel = ref('deepseek-v4-flash')
   const availableModels = ref([])
   const enableIntentRecognition = ref(false)
 

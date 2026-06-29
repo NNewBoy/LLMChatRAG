@@ -7,6 +7,7 @@ router = APIRouter(prefix="/api", tags=["models"])
 
 # 可用 LLM 模型列表 (含多模态标记)
 AVAILABLE_LLM_MODELS = [
+    {"id": "deepseek-v4-flash", "name": "Deepseek V4 Flash", "provider": "openai", "multimodal": False},
     {"id": "glm-5.2", "name": "GLM-5.2", "provider": "openai", "multimodal": False},
     {"id": "doubao-seed-2.0-pro", "name": "Doubao-Seed-2.0-pro", "provider": "openai", "multimodal": True},
     {"id": "doubao-seed-2.0-lite", "name": "Doubao-Seed-2.0-lite", "provider": "openai", "multimodal": True},

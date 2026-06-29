@@ -136,7 +136,7 @@ function handleRename({ id, title }) {
   store.renameConversation(id, title)
 }
 
-function handleSend(content) {
+function handleSend({ content, image }) {
   store.sendMessage(content, null)
 }
 
