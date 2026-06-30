@@ -17,7 +17,7 @@
       </div>
 
       <!-- LLM 模型选择 -->
-      <div class="config-section">
+      <div class="config-section" v-if="showIntent || showRag">
         <label class="config-label">LLM 模型</label>
         <el-select
           v-model="localModel"
