@@ -28,6 +28,7 @@
             v-if="isStreaming"
             type="danger"
             circle
+            size="large"
             @click="$emit('stop')"
           >
             <el-icon><VideoPause /></el-icon>
@@ -36,6 +37,7 @@
             v-else
             type="primary"
             circle
+            size="large"
             :disabled="!textContent.trim() && !imageData"
             @click="handleSend"
           >

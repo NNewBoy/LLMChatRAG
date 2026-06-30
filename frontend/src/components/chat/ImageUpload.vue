@@ -6,7 +6,7 @@
       :on-change="handleFileChange"
       accept="image/*"
     >
-      <el-button :icon="Picture" circle :disabled="disabled" title="上传图片" />
+      <el-button :icon="Picture" size="large" circle :disabled="disabled" title="上传图片" />
     </el-upload>
     <div v-if="imagePreview" class="image-preview">
       <img :src="imagePreview" alt="preview" />

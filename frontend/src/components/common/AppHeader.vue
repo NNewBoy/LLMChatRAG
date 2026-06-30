@@ -4,13 +4,19 @@
       <slot name="left" />
       <span class="app-title">{{ title }}</span>
     </div>
-    <div class="header-nav">
-      <el-radio-group :model-value="currentMode" @change="onChange">
-        <el-radio-button label="chat">普通对话</el-radio-button>
-        <el-radio-button label="rag">RAG 对话</el-radio-button>
-        <el-radio-button label="documents">文档管理</el-radio-button>
-      </el-radio-group>
-    </div>
+    <nav class="header-nav" role="tablist" aria-label="主导航">
+      <el-button
+        v-for="tab in tabs"
+        :key="tab.value"
+        :type="currentMode === tab.value ? 'primary' : 'default'"
+        :class="['nav-tab', { 'is-active': currentMode === tab.value }]"
+        role="tab"
+        :aria-selected="currentMode === tab.value"
+        @click="onChange(tab.value)"
+      >
+        {{ tab.label }}
+      </el-button>
+    </nav>
     <div class="header-right">
       <slot name="right" />
     </div>
@@ -20,7 +26,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 
-const props = defineProps({
+defineProps({
   currentMode: { type: String, required: true },
   title: { type: String, default: '' },
 })
@@ -28,6 +34,12 @@ const props = defineProps({
 const emit = defineEmits(['switch-mode'])
 
 const router = useRouter()
+
+const tabs = [
+  { value: 'chat', label: '普通对话' },
+  { value: 'rag', label: 'RAG 对话' },
+  { value: 'documents', label: '文档管理' },
+]
 
 function onChange(mode) {
   emit('switch-mode', mode)
@@ -54,6 +66,46 @@ function onChange(mode) {
   flex: 1;
   display: flex;
   justify-content: center;
+  gap: 6px;
+}
+
+/* 分段控件 - 基于 el-button，每个按钮自带玻璃底+边框 */
+.header-nav :deep(.nav-tab.el-button) {
+  min-height: 36px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  background: var(--glass-bg);
+  transition: all 0.2s ease;
+  margin: 0;
+}
+
+/* 未激活态 hover */
+.header-nav :deep(.nav-tab.el-button:not(.is-active):hover) {
+  color: var(--text-primary);
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+}
+
+/* 激活态 - 强调色填充 */
+.header-nav :deep(.nav-tab.el-button.is-active) {
+  color: #fff;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 8px var(--accent-primary-glow);
+}
+
+.header-nav :deep(.nav-tab.el-button.is-active:hover) {
+  background: var(--accent-primary-light);
+  border-color: var(--accent-primary-light);
+}
+
+/* 按下反馈 */
+.header-nav :deep(.nav-tab.el-button:active) {
+  transform: scale(0.97);
 }
 
 .header-left {
@@ -124,11 +176,15 @@ function onChange(mode) {
 
   .header-nav {
     flex: 0 0 auto;
+    gap: 2px;
+    padding: 3px;
   }
 
-  .header-nav :deep(.el-radio-button__inner) {
-    padding: 8px 12px;
-    font-size: 13px;
+  /* 移动端：触摸目标 ≥44px，加大字号与内边距 */
+  .header-nav :deep(.nav-tab.el-button) {
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 15px;
   }
 }
 
@@ -136,12 +192,13 @@ function onChange(mode) {
 @media (max-width: 480px) {
   .app-header {
     padding: 0 8px;
-    height: 50px;
+    height: 56px;
   }
 
-  .header-nav :deep(.el-radio-button__inner) {
-    padding: 6px 8px;
-    font-size: 12px;
+  /* 小屏仍保持 44px 触摸目标，仅缩减水平内边距 */
+  .header-nav :deep(.nav-tab.el-button) {
+    padding: 0 12px;
+    font-size: 14px;
   }
 }
 </style>

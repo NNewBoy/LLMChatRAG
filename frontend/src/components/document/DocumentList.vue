@@ -2,18 +2,18 @@
   <div class="document-list">
     <el-table v-if="documents.length > 0" :data="documents" style="width: 100%">
       <el-table-column prop="filename" label="文件名" min-width="200" />
-      <el-table-column prop="file_type" label="类型" width="80" />
-      <el-table-column label="大小" width="100">
-        <template #default="{ row }">
-          {{ formatSize(row.file_size) }}
-        </template>
-      </el-table-column>
       <el-table-column label="状态" width="120">
         <template #default="{ row }">
           <DocumentStatus :status="row.status" />
         </template>
       </el-table-column>
       <el-table-column prop="chunk_count" label="分块数" width="80" />
+      <el-table-column prop="file_type" label="类型" width="80" />
+      <el-table-column label="大小" width="100">
+        <template #default="{ row }">
+          {{ formatSize(row.file_size) }}
+        </template>
+      </el-table-column>
       <el-table-column label="操作" width="80">
         <template #default="{ row }">
           <el-button
