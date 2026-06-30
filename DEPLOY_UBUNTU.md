@@ -286,17 +286,22 @@ location /llmchatrag {
 # 前端请求 /llmchatrag/api/xxx，proxy_pass 末尾带斜杠会替换 location 匹配部分，
 # 即 /llmchatrag/api/models -> http://127.0.0.1:8003/api/models
 location /llmchatrag/api/ {
+    # 文档上传大小限制（RAG 文档可能较大，按需调整）
+    client_max_body_size 10M;
+
     proxy_pass http://127.0.0.1:8003/api/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 
-    # ====== SSE 流式输出关键配置 ======
+    # ====== SSE 流式输出支持 ======
+    # 注意: 不要在此设置 proxy_buffering off，否则该路径下所有 API 请求
+    # （会话列表、模型列表等普通 GET）都会禁用缓冲，影响页面加载速度。
+    # SSE 流式输出由后端响应头 X-Accel-Buffering: no 自动控制，
+    # Nginx 会针对该单个响应禁用缓冲，无需 location 级别全局禁用。
     proxy_http_version 1.1;
     proxy_set_header Connection "";   # 清除 Connection 头以启用 HTTP/1.1 keep-alive
-    proxy_buffering off;              # 禁用缓冲，保证 token 实时推送
-    proxy_cache off;                  # 禁用缓存
     chunked_transfer_encoding on;     # 启用分块传输
     proxy_read_timeout 300s;          # SSE 长连接读超时（对话可能持续较久）
     proxy_send_timeout 300s;
@@ -322,7 +327,7 @@ server {
     server_name your-domain.com;  # 替换为你的域名或 IP
 
     # 文档上传大小限制（RAG 文档可能较大，按需调整）
-    client_max_body_size 50M;
+    client_max_body_size 10M;
 
     # LLMChatRAG 前端
     location /llmchatrag {
@@ -340,11 +345,11 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        # SSE 流式输出关键配置
+        # SSE 流式输出支持
+        # 不设 proxy_buffering off，普通 API 请求保持默认缓冲快速返回；
+        # SSE 响应由后端 X-Accel-Buffering: no 头自动禁用缓冲
         proxy_http_version 1.1;
         proxy_set_header Connection "";
-        proxy_buffering off;
-        proxy_cache off;
         chunked_transfer_encoding on;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
@@ -637,18 +642,44 @@ sudo nginx -t
 
 ### 4. 对话不流式输出（内容一次性全部出现）
 
-这是 Nginx 缓冲导致的 SSE 问题。检查 `/llmchatrag/api/` location 配置：
+SSE 流式输出依赖后端响应头 `X-Accel-Buffering: no`（已在 [chat.py](file:///d:/AIProjects/LLMChatRAG/backend/routes/chat.py) / [rag.py](file:///d:/AIProjects/LLMChatRAG/backend/routes/rag.py) 的 `StreamingResponse` 中设置），Nginx 会针对该响应自动禁用缓冲。
 
-```nginx
-# 必须包含以下配置
-proxy_buffering off;
-proxy_http_version 1.1;
-proxy_set_header Connection "";
+检查要点：
+
+```bash
+# 1. 确认 Nginx 未忽略 X-Accel-Buffering 头
+# 配置中不应出现: proxy_ignore_headers X-Accel-Buffering;
+sudo nginx -T 2>/dev/null | grep proxy_ignore_headers
+
+# 2. 确认 /llmchatrag/api/ 代理配置了 HTTP/1.1 与长连接
+#   proxy_http_version 1.1;
+#   proxy_set_header Connection "";
+
+# 3. 确认后端 SSE 响应头包含 X-Accel-Buffering: no
+curl -i -N -X POST http://127.0.0.1:8003/api/chat/conversations/<id>/messages \
+  -H "Content-Type: application/json" -d '{"content":"hi","model":"xxx"}' | head -20
 ```
 
-修改后重载：`sudo systemctl reload nginx`
+> **注意**: 不要在 `/llmchatrag/api/` location 设置 `proxy_buffering off`，否则会拖慢普通 API 请求。SSE 禁用缓冲由响应头自动完成。
 
 ### 5. 文档上传失败
+
+#### 413 Request Entity Too Large
+
+Nginx 默认上传限制 1MB，RAG 文档通常较大需调高：
+
+```bash
+# 检查当前 Nginx 配置中的 client_max_body_size
+sudo nginx -T 2>/dev/null | grep client_max_body_size
+
+# 在 /llmchatrag/api/ location 块或 server 块中添加（建议 10M 或更大）:
+#   client_max_body_size 10M;
+
+# 修改后重载
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+#### 上传目录权限问题
 
 ```bash
 # 检查上传目录权限
@@ -656,9 +687,6 @@ ls -la /var/LLMChatRAG/backend/data/uploads/
 
 # 确认目录可写
 sudo chmod -R 777 /var/LLMChatRAG/backend/data
-
-# 检查 Nginx 上传大小限制
-# 在 server 块中确认 client_max_body_size 设置足够大（默认 1M）
 ```
 
 ### 6. RAG 检索报错

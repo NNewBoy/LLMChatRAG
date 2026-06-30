@@ -14,7 +14,7 @@
         <div class="drag-text">
           {{ uploading ? '上传中...' : '将文件拖拽到此处，或点击上传' }}
         </div>
-        <div class="upload-tip">支持 PDF、Word、HTML、TXT 格式，单个文件不超过 50MB</div>
+        <div class="upload-tip">支持 PDF、Word、HTML、TXT 格式，单个文件不超过 10MB</div>
       </div>
     </el-upload>
   </div>
@@ -31,9 +31,9 @@ const uploadRef = ref()
 const uploading = ref(false)
 
 function beforeUpload(file) {
-  const maxSize = 50 * 1024 * 1024 // 50MB
+  const maxSize = 10 * 1024 * 1024 // 1MB
   if (file.size > maxSize) {
-    ElMessage.error('文件大小不能超过 50MB')
+    ElMessage.error('文件大小不能超过 10MB')
     return false
   }
   return true
