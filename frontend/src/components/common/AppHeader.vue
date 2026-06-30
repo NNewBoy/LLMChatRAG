@@ -46,7 +46,7 @@ function onChange(mode) {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
   z-index: 10;
 }
 
@@ -94,7 +94,7 @@ function onChange(mode) {
 
 :deep(.el-button.is-text:hover) {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--glass-bg-hover);
 }
 
 /* 平板适配 */
@@ -111,7 +111,7 @@ function onChange(mode) {
 @media (max-width: 768px) {
   .header-left,
   .header-right {
-    flex: 0 0 auto;
+    flex: 1 1 0;
   }
 
   .app-title {
@@ -120,6 +120,10 @@ function onChange(mode) {
 
   :deep(.menu-btn) {
     display: inline-flex;
+  }
+
+  .header-nav {
+    flex: 0 0 auto;
   }
 
   .header-nav :deep(.el-radio-button__inner) {

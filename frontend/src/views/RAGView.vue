@@ -25,7 +25,8 @@
       </div>
 
       <el-drawer v-model="sidebarVisible" direction="ltr" size="280px" :show-close="false">
-        <RAGChatSidebar
+        <ChatSidebar
+          mode="rag"
           :conversations="store.conversations"
           :current-id="store.currentConversationId"
           @new-chat="handleNewChat"
@@ -187,6 +188,7 @@ function handleFeedback({ id, isCorrect }) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--bg-main);
 }
 
 .message-list-container {
@@ -205,6 +207,15 @@ function handleFeedback({ id, isCorrect }) {
   align-items: center;
   justify-content: center;
   height: 100%;
+}
+
+/* 移动端 drawer：移除 body padding 和 header */
+:deep(.el-drawer__body) {
+  padding: 0;
+}
+
+:deep(.el-drawer__header) {
+  display: none;
 }
 
 @media (max-width: 768px) {

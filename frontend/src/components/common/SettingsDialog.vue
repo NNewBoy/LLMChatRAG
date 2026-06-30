@@ -1,6 +1,21 @@
 <template>
   <el-dialog v-model="visible" title="配置" :width="dialogWidth" :close-on-click-modal="true" append-to-body>
     <div class="settings-content">
+      <!-- 主题切换 (所有页面通用) -->
+      <div class="config-section">
+        <label class="config-label">外观主题</label>
+        <div class="theme-switch-row">
+          <div class="theme-option" :class="{ active: themeStore.theme === 'light' }" @click="setTheme('light')">
+            <el-icon :size="18"><Sunny /></el-icon>
+            <span>浅色</span>
+          </div>
+          <div class="theme-option" :class="{ active: themeStore.theme === 'dark' }" @click="setTheme('dark')">
+            <el-icon :size="18"><Moon /></el-icon>
+            <span>深色</span>
+          </div>
+        </div>
+      </div>
+
       <!-- LLM 模型选择 -->
       <div class="config-section">
         <label class="config-label">LLM 模型</label>
@@ -78,6 +93,8 @@
 
 <script setup>
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { Sunny, Moon } from '@element-plus/icons-vue'
+import { useThemeStore } from '../../stores/theme'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -104,6 +121,8 @@ const emit = defineEmits([
   'update:reranking',
 ])
 
+const themeStore = useThemeStore()
+
 const visible = ref(props.modelValue)
 const localModel = ref(props.model)
 const localIntent = ref(props.intent)
@@ -124,6 +143,11 @@ function updateWidth() {
 
 onMounted(() => window.addEventListener('resize', updateWidth))
 onUnmounted(() => window.removeEventListener('resize', updateWidth))
+
+// 切换主题（直接刷新 CSS，无需重启页面）
+function setTheme(theme) {
+  themeStore.setTheme(theme)
+}
 
 watch(() => props.modelValue, (val) => { visible.value = val })
 watch(visible, (val) => { emit('update:modelValue', val) })
@@ -168,5 +192,41 @@ watch(() => props.reranking, (val) => { localReranking.value = val })
   color: var(--text-muted, #94a3b8);
   margin: 4px 0 0;
   max-width: 320px;
+}
+
+/* 主题切换按钮组 */
+.theme-switch-row {
+  display: flex;
+  gap: 12px;
+}
+
+.theme-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  background: var(--glass-bg, rgba(255, 255, 255, 0.06));
+  color: var(--text-secondary, #cbd5e1);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.theme-option:hover {
+  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--glass-border-hover, rgba(255, 255, 255, 0.2));
+}
+
+.theme-option.active {
+  background: var(--accent-primary, #6366f1);
+  border-color: var(--accent-primary, #6366f1);
+  color: #fff;
+  box-shadow: 0 0 12px var(--accent-primary-glow, rgba(99, 102, 241, 0.3));
 }
 </style>

@@ -1,62 +1,160 @@
 /* ============================================================
-   LLMChatRAG - Glassmorphism + Dark Mode Theme
+   LLMChatRAG - Glassmorphism Theme (Light + Dark Mode)
+   :root = Light Mode (default)
+   html.dark = Dark Mode override
    ============================================================ */
 
 :root {
-  /* Color Palette - Dark Mode */
-  --bg-base: #0a0a0f;
-  --bg-elevated: #12121a;
-  --bg-surface: #1a1a25;
+  /* Color Palette - Light Mode */
+  --bg-base: #eef2f8;
+  /* 最底层：浅灰蓝（app-background + header/sidebar 衬底） */
+  --bg-elevated: #f8fafc;
+  /* 次底层：略浅（浮层/卡片） */
+  --bg-surface: #ffffff;
+  /* 玻璃卡片表面 */
+  --bg-main: #ffffff;
+  /* 主内容区：纯白（chat-main/rag-main/document-body） */
 
-  /* Glass surfaces */
-  --glass-bg: rgba(255, 255, 255, 0.06);
-  --glass-bg-hover: rgba(255, 255, 255, 0.1);
-  --glass-bg-strong: rgba(255, 255, 255, 0.12);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-border-hover: rgba(255, 255, 255, 0.2);
+  /* Glass surfaces - Light */
+  --glass-bg: rgba(248, 250, 252, 0.75);
+  --glass-bg-hover: rgba(248, 250, 252, 0.9);
+  --glass-bg-strong: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(15, 23, 42, 0.1);
+  --glass-border-hover: rgba(15, 23, 42, 0.18);
   --glass-blur: 20px;
 
-  /* Accent colors */
+  /* Accent colors (shared) */
   --accent-primary: #6366f1;
   --accent-primary-light: #818cf8;
-  --accent-primary-glow: rgba(99, 102, 241, 0.4);
+  --accent-primary-glow: rgba(99, 102, 241, 0.25);
   --accent-secondary: #8b5cf6;
   --accent-success: #22c55e;
   --accent-warning: #f59e0b;
   --accent-danger: #ef4444;
   --accent-info: #3b82f6;
 
-  /* Text */
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  /* Text - Light Mode (contrast >= 4.5:1) */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #475569;
   --text-faint: #64748b;
 
-  /* Gradients */
-  --gradient-hero: radial-gradient(
-      ellipse at top,
-      rgba(99, 102, 241, 0.15) 0%,
-      transparent 60%
-    ),
-    radial-gradient(
-      ellipse at bottom right,
-      rgba(139, 92, 246, 0.1) 0%,
-      transparent 50%
-    );
+  /* Gradients - Light */
+  --gradient-hero: radial-gradient(ellipse at top,
+      rgba(99, 102, 241, 0.1) 0%,
+      transparent 60%),
+    radial-gradient(ellipse at bottom right,
+      rgba(139, 92, 246, 0.08) 0%,
+      transparent 50%);
 
-  /* Shadows */
-  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-glass-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+  /* Shadows - Light */
+  --shadow-glass: 0 8px 32px rgba(15, 23, 42, 0.08);
+  --shadow-glass-lg: 0 16px 48px rgba(15, 23, 42, 0.12);
   --shadow-glow: 0 0 24px var(--accent-primary-glow);
 
-  /* Radii */
+  /* Radii (shared) */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
 }
 
-/* ---- Element Plus Dark Mode Overrides ---- */
+/* ---- Dark Mode Variable Overrides ---- */
+html.dark {
+  /* Color Palette - Dark Mode */
+  --bg-base: #0a0a0f;
+  --bg-elevated: #12121a;
+  --bg-surface: #1a1a25;
+  --bg-main: #12121a;
+  /* 主内容区：深色表面 */
+
+  /* Glass surfaces - Dark */
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-bg-hover: rgba(255, 255, 255, 0.1);
+  --glass-bg-strong: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-hover: rgba(255, 255, 255, 0.2);
+
+  /* Text - Dark Mode */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
+
+  /* Gradients - Dark */
+  --gradient-hero: radial-gradient(ellipse at top,
+      rgba(99, 102, 241, 0.15) 0%,
+      transparent 60%),
+    radial-gradient(ellipse at bottom right,
+      rgba(139, 92, 246, 0.1) 0%,
+      transparent 50%);
+
+  /* Shadows - Dark */
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glass-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   Element Plus Overrides
+   ============================================================ */
+
+/* ---- Light Mode (default, html without .dark) ---- */
+html:not(.dark) {
+  /* Primary */
+  --el-color-primary: #6366f1;
+  --el-color-primary-light-3: #818cf8;
+  --el-color-primary-light-5: #a5b4fc;
+  --el-color-primary-light-7: #c7d2fe;
+  --el-color-primary-light-8: #ddd6fe;
+  --el-color-primary-light-9: #ede9fe;
+  --el-color-primary-dark-2: #4f46e5;
+
+  --el-color-success: #22c55e;
+  --el-color-warning: #f59e0b;
+  --el-color-danger: #ef4444;
+  --el-color-info: #3b82f6;
+
+  /* Backgrounds */
+  --el-bg-color: transparent;
+  --el-bg-color-page: transparent;
+  --el-bg-color-overlay: rgba(255, 255, 255, 0.95);
+
+  /* Text */
+  --el-text-color-primary: #0f172a;
+  --el-text-color-regular: #334155;
+  --el-text-color-secondary: #475569;
+  --el-text-color-placeholder: #94a3b8;
+  --el-text-color-disabled: #cbd5e1;
+
+  /* Borders */
+  --el-border-color: rgba(15, 23, 42, 0.12);
+  --el-border-color-light: rgba(15, 23, 42, 0.08);
+  --el-border-color-lighter: rgba(15, 23, 42, 0.06);
+  --el-border-color-extra-light: rgba(15, 23, 42, 0.04);
+
+  /* Fill */
+  --el-fill-color: rgba(15, 23, 42, 0.04);
+  --el-fill-color-light: rgba(15, 23, 42, 0.03);
+  --el-fill-color-lighter: rgba(15, 23, 42, 0.02);
+  --el-fill-color-extra-light: rgba(15, 23, 42, 0.015);
+  --el-fill-color-blank: transparent;
+
+  /* Mask */
+  --el-mask-color: rgba(255, 255, 255, 0.7);
+  --el-mask-color-extra-light: rgba(255, 255, 255, 0.3);
+
+  /* Radius */
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 20px;
+
+  /* Disabled */
+  --el-disabled-bg-color: rgba(15, 23, 42, 0.04);
+  --el-disabled-text-color: #94a3b8;
+  --el-disabled-border-color: rgba(15, 23, 42, 0.08);
+}
+
+/* ---- Dark Mode Overrides ---- */
 html.dark {
   /* Primary */
   --el-color-primary: #6366f1;
@@ -112,7 +210,9 @@ html.dark {
   --el-disabled-border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* ---- Glassmorphism Utility Classes ---- */
+/* ============================================================
+   Glassmorphism Utility Classes (shared, uses CSS vars)
+   ============================================================ */
 .glass {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
@@ -137,33 +237,53 @@ html.dark {
   box-shadow: var(--shadow-glass-lg);
 }
 
-/* ---- Scrollbar ---- */
+/* ============================================================
+   Scrollbar
+   ============================================================ */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.02);
+}
+
+html.dark ::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.02);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.15);
   border-radius: 3px;
 }
 
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.25);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
 /* ---- Selection ---- */
 ::selection {
+  background: rgba(99, 102, 241, 0.25);
+  color: inherit;
+}
+
+html.dark ::selection {
   background: rgba(99, 102, 241, 0.3);
   color: #fff;
 }
 
 /* ---- Reduced Motion ---- */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -173,7 +293,310 @@ html.dark {
   }
 }
 
-/* ---- Element Plus Component Overrides (Dark Glass) ---- */
+/* ============================================================
+   Element Plus Component Overrides - Light Mode
+   ============================================================ */
+
+/* Button */
+html:not(.dark) .el-button {
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+html:not(.dark) .el-button--primary {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+html:not(.dark) .el-button--primary:hover {
+  background: var(--accent-primary-light);
+  border-color: var(--accent-primary-light);
+  box-shadow: 0 0 16px var(--accent-primary-glow);
+}
+
+html:not(.dark) .el-button--success {
+  background: var(--accent-success);
+  border-color: var(--accent-success);
+}
+
+html:not(.dark) .el-button--default {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: var(--glass-border);
+  color: var(--text-secondary);
+}
+
+html:not(.dark) .el-button--default:hover {
+  background: rgba(15, 23, 42, 0.08);
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+}
+
+html:not(.dark) .el-button.is-text {
+  color: var(--text-muted);
+}
+
+html:not(.dark) .el-button.is-text:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: var(--text-primary);
+}
+
+/* Radio Button Group */
+html:not(.dark) .el-radio-button__inner {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: var(--glass-border);
+  color: var(--text-secondary);
+}
+
+html:not(.dark) .el-radio-button__original-radio:checked+.el-radio-button__inner {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+  box-shadow: -1px 0 0 0 var(--accent-primary);
+}
+
+/* Input / Select / Textarea */
+html:not(.dark) .el-input__wrapper,
+html:not(.dark) .el-textarea__inner {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+html:not(.dark) .el-input__wrapper:hover,
+html:not(.dark) .el-textarea__inner:hover {
+  border-color: var(--glass-border-hover);
+}
+
+html:not(.dark) .el-input__wrapper.is-focus,
+html:not(.dark) .el-textarea__inner:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-glow);
+}
+
+html:not(.dark) .el-select__wrapper {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+html:not(.dark) .el-select__wrapper:hover {
+  border-color: var(--glass-border-hover);
+}
+
+html:not(.dark) .el-select__wrapper.is-focused {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-glow);
+}
+
+/* Switch */
+html:not(.dark) .el-switch.is-checked .el-switch__core {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+html:not(.dark) .el-switch__core {
+  background-color: rgba(15, 23, 42, 0.12);
+  border-color: var(--glass-border);
+}
+
+/* Divider */
+html:not(.dark) .el-divider {
+  border-color: var(--glass-border);
+}
+
+html:not(.dark) .el-divider__text {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+/* Collapse */
+html:not(.dark) .el-collapse {
+  border-color: var(--glass-border);
+}
+
+html:not(.dark) .el-collapse-item__header {
+  background: transparent;
+  border-bottom-color: var(--glass-border);
+  color: var(--text-secondary);
+}
+
+html:not(.dark) .el-collapse-item__wrap {
+  background: transparent;
+  border-bottom-color: var(--glass-border);
+}
+
+html:not(.dark) .el-collapse-item__content {
+  color: var(--text-secondary);
+}
+
+/* Empty */
+html:not(.dark) .el-empty__description p {
+  color: var(--text-muted);
+}
+
+/* Drawer */
+html:not(.dark) .el-drawer {
+  background: rgba(248, 250, 252, 0.96);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+/* Dialog */
+
+html:not(.dark) .el-dialog {
+  background: rgba(248, 250, 252, 0.96);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass-lg);
+}
+
+html:not(.dark) .el-dialog__header {
+  border-bottom: 1px solid var(--glass-border);
+  padding: 18px 24px;
+}
+
+html:not(.dark) .el-dialog__title {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+html:not(.dark) .el-dialog__body {
+  color: var(--text-secondary);
+  padding: 24px;
+}
+
+html:not(.dark) .el-dialog__footer {
+  border-top: 1px solid var(--glass-border);
+  padding: 16px 24px;
+}
+
+/* Popper / Dropdown overlay */
+html:not(.dark) .el-popper.is-light {
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+html:not(.dark) .el-popper.is-light .el-popper__arrow::before {
+  background: var(--bg-elevated);
+  border-color: var(--glass-border);
+}
+
+html:not(.dark) .el-select-dropdown__item {
+  color: var(--text-secondary);
+}
+
+html:not(.dark) .el-select-dropdown__item.hover,
+html:not(.dark) .el-select-dropdown__item:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+html:not(.dark) .el-select-dropdown__item.selected {
+  color: var(--accent-primary);
+}
+
+/* Message */
+html:not(.dark) .el-message {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+/* Loading */
+html:not(.dark) .el-loading-mask {
+  background: rgba(238, 242, 248, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+/* Upload */
+html:not(.dark) .el-upload-dragger {
+  background: rgba(255, 255, 255, 0.5);
+  border: 2px dashed var(--glass-border);
+  border-radius: var(--radius-md);
+  transition: all 0.25s ease;
+}
+
+html:not(.dark) .el-upload-dragger:hover {
+  border-color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+/* Tabs */
+html:not(.dark) .el-tabs--border-card {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+html:not(.dark) .el-tabs--border-card>.el-tabs__header {
+  background: rgba(15, 23, 42, 0.02);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+html:not(.dark) .el-tabs--border-card>.el-tabs__header .el-tabs__item {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+}
+
+html:not(.dark) .el-tabs--border-card>.el-tabs__header .el-tabs__item.is-active {
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--accent-primary);
+}
+
+/* Table */
+html:not(.dark) .el-table {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+html:not(.dark) .el-table tr,
+html:not(.dark) .el-table th.el-table__cell {
+  background: transparent;
+  border-bottom-color: var(--glass-border);
+}
+
+html:not(.dark) .el-table--border .el-table__cell {
+  border-right-color: var(--glass-border);
+}
+
+html:not(.dark) .el-table__row:hover>td {
+  background: rgba(15, 23, 42, 0.03) !important;
+}
+
+/* Tag */
+html:not(.dark) .el-tag {
+  border-radius: var(--radius-sm);
+}
+
+/* Pagination */
+html:not(.dark) .el-pagination .btn-prev,
+html:not(.dark) .el-pagination .btn-next,
+html:not(.dark) .el-pagination .el-pager li {
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+}
+
+html:not(.dark) .el-pagination .el-pager li.is-active {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+/* Progress */
+html:not(.dark) .el-progress-bar__outer {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+/* ============================================================
+   Element Plus Component Overrides - Dark Mode
+   ============================================================ */
 
 /* Button */
 html.dark .el-button {
@@ -226,7 +649,7 @@ html.dark .el-radio-button__inner {
   color: var(--text-secondary);
 }
 
-html.dark .el-radio-button__original-radio:checked + .el-radio-button__inner {
+html.dark .el-radio-button__original-radio:checked+.el-radio-button__inner {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
   color: #fff;
@@ -323,11 +746,6 @@ html.dark .el-drawer {
 }
 
 /* Dialog */
-html.dark .el-overlay-dialog {
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
 
 html.dark .el-dialog {
   background: rgba(18, 18, 26, 0.96);
@@ -417,18 +835,18 @@ html.dark .el-tabs--border-card {
   border-radius: var(--radius-md);
 }
 
-html.dark .el-tabs--border-card > .el-tabs__header {
+html.dark .el-tabs--border-card>.el-tabs__header {
   background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid var(--glass-border);
 }
 
-html.dark .el-tabs--border-card > .el-tabs__header .el-tabs__item {
+html.dark .el-tabs--border-card>.el-tabs__header .el-tabs__item {
   background: transparent;
   border: none;
   color: var(--text-muted);
 }
 
-html.dark .el-tabs--border-card > .el-tabs__header .el-tabs__item.is-active {
+html.dark .el-tabs--border-card>.el-tabs__header .el-tabs__item.is-active {
   background: rgba(99, 102, 241, 0.1);
   color: var(--accent-primary-light);
 }
@@ -449,7 +867,7 @@ html.dark .el-table--border .el-table__cell {
   border-right-color: var(--glass-border);
 }
 
-html.dark .el-table__row:hover > td {
+html.dark .el-table__row:hover>td {
   background: rgba(255, 255, 255, 0.04) !important;
 }
 

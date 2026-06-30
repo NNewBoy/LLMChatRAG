@@ -25,33 +25,31 @@
       <div class="message-content" v-else v-html="renderedContent"></div>
       <!-- 操作按钮 -->
       <div class="message-actions" v-if="message.role === 'assistant' && !isStreaming">
-        <el-button-group size="small">
-          <el-button text size="small" @click="$emit('regenerate', message.id)">
-            <el-icon><RefreshRight /></el-icon> 重新生成
-          </el-button>
-          <el-button text size="small" @click="$emit('followup', message.id)">
-            <el-icon><ChatDotRound /></el-icon> 追问
-          </el-button>
-          <el-button text size="small" @click="$emit('delete', message.id)">
-            <el-icon><Delete /></el-icon> 删除
-          </el-button>
-          <el-button
-            text size="small"
-            :type="message.is_correct === 1 ? 'success' : ''"
-            @click="$emit('feedback', { id: message.id, isCorrect: true })"
-            v-if="showFeedback && message.id && !message.id.startsWith('temp')"
-          >
-            <el-icon><Check /></el-icon> 正确
-          </el-button>
-          <el-button
-            text size="small"
-            :type="message.is_correct === 0 ? 'danger' : ''"
-            @click="$emit('feedback', { id: message.id, isCorrect: false })"
-            v-if="showFeedback && message.id && !message.id.startsWith('temp')"
-          >
-            <el-icon><Close /></el-icon> 错误
-          </el-button>
-        </el-button-group>
+        <el-button text size="small" @click="$emit('regenerate', message.id)">
+          <el-icon><RefreshRight /></el-icon> 重新生成
+        </el-button>
+        <el-button text size="small" @click="$emit('followup', message.id)">
+          <el-icon><ChatDotRound /></el-icon> 追问
+        </el-button>
+        <el-button text size="small" @click="$emit('delete', message.id)">
+          <el-icon><Delete /></el-icon> 删除
+        </el-button>
+        <el-button
+          text size="small"
+          :type="message.is_correct === 1 ? 'success' : ''"
+          @click="$emit('feedback', { id: message.id, isCorrect: true })"
+          v-if="showFeedback && message.id && !message.id.startsWith('temp')"
+        >
+          <el-icon><Check /></el-icon> 正确
+        </el-button>
+        <el-button
+          text size="small"
+          :type="message.is_correct === 0 ? 'danger' : ''"
+          @click="$emit('feedback', { id: message.id, isCorrect: false })"
+          v-if="showFeedback && message.id && !message.id.startsWith('temp')"
+        >
+          <el-icon><Close /></el-icon> 错误
+        </el-button>
       </div>
     </div>
   </div>
@@ -122,9 +120,9 @@ const isWaiting = computed(() =>
 }
 
 .chat-message.is-user .message-content {
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 12px 12px 2px 12px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+  border-radius: var(--radius-md, 12px);
   padding: 10px 14px;
   display: inline-block;
   max-width: 100%;
@@ -166,7 +164,7 @@ const isWaiting = computed(() =>
 }
 
 .message-content :deep(pre) {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(15, 23, 42, 0.06);
   border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
   border-radius: var(--radius-md, 12px);
   padding: 12px;

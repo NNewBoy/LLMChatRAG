@@ -1,7 +1,11 @@
 <template>
   <div class="document-view">
     <!-- 顶部导航栏 -->
-    <AppHeader :current-mode="currentMode" title="文档管理 & 错题集" />
+    <AppHeader :current-mode="currentMode" title="文档管理 & 错题集">
+      <template #right>
+        <el-button :icon="Setting" text @click="settingsVisible = true" title="配置" />
+      </template>
+    </AppHeader>
 
     <div class="document-body">
       <el-tabs v-model="activeTab" class="document-tabs">
@@ -36,22 +40,28 @@
         </el-tab-pane>
       </el-tabs>
     </div>
+
+    <!-- 配置弹窗（主题切换） -->
+    <SettingsDialog v-model="settingsVisible" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Setting } from '@element-plus/icons-vue'
 import { useDocumentStore } from '../stores/document'
 import DocumentUpload from '../components/document/DocumentUpload.vue'
 import DocumentList from '../components/document/DocumentList.vue'
 import BadCaseEditor from '../components/rag/BadCaseEditor.vue'
 import AppHeader from '../components/common/AppHeader.vue'
+import SettingsDialog from '../components/common/SettingsDialog.vue'
 
 const docStore = useDocumentStore()
 
 const currentMode = ref('documents')
 const activeTab = ref('documents')
+const settingsVisible = ref(false)
 
 onMounted(async () => {
   await docStore.fetchDocuments()
@@ -108,7 +118,7 @@ async function handleUpdateBadCase({ id, correct_answer, use_as_example }) {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
-  background: transparent;
+  background: var(--bg-main);
   position: relative;
   z-index: 1;
 }

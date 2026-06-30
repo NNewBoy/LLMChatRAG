@@ -36,10 +36,27 @@ watch(() => props.isStreaming, (val) => {
 <style scoped>
 .chat-thinking {
   margin: 8px 0;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--el-fill-color-light, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
   border-radius: var(--radius-md, 12px);
   padding: 0 12px;
+}
+
+/* 浅色模式：更柔和的浅紫底，与白底主体协调 */
+html:not(.dark) .chat-thinking {
+  background: rgba(99, 102, 241, 0.04);
+  border-color: rgba(99, 102, 241, 0.12);
+}
+
+/* 移除 el-collapse 自带 border，避免与父元素 border 重叠 */
+.chat-thinking :deep(.el-collapse) {
+  border: none;
+}
+
+.chat-thinking :deep(.el-collapse-item__header),
+.chat-thinking :deep(.el-collapse-item__wrap) {
+  border-bottom: none;
+  background: transparent;
 }
 
 .thinking-header {

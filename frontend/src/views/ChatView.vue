@@ -161,11 +161,21 @@ function handleFollowup(messageId) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--bg-main);
 }
 
 @media (max-width: 768px) {
   .sidebar-pc {
     display: none;
   }
+}
+
+/* 移动端 drawer：移除 body padding 和 header */
+:deep(.el-drawer__body) {
+  padding: 0;
+}
+
+:deep(.el-drawer__header) {
+  display: none;
 }
 </style>

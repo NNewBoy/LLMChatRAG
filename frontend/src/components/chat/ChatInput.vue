@@ -71,9 +71,11 @@ const supportsMultimodal = computed(() => {
 })
 
 const placeholder = computed(() => {
+  const isMobile = window.innerWidth < 768
+  const hint = isMobile ? '' : ' (Enter 发送, Shift+Enter 换行)'
   return props.mode === 'rag'
-    ? '输入问题，基于上传文档进行问答 (Enter 发送, Shift+Enter 换行)'
-    : '输入消息，按 Enter 发送，Shift+Enter 换行'
+    ? `输入问题，基于上传文档进行问答${hint}`
+    : `输入消息${hint}`
 })
 
 function onImageChange(data) {
@@ -113,6 +115,18 @@ function handleSend() {
   max-width: 800px;
   margin: 0 auto;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* 浅色模式：白色背景 + 阴影 */
+html:not(.dark) .input-bubble {
+  background: #ffffff;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+html:not(.dark) .input-bubble:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08), 0 0 0 3px var(--accent-primary-glow);
 }
 
 .input-bubble:focus-within {

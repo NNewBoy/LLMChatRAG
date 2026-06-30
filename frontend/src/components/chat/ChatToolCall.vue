@@ -25,12 +25,31 @@ defineProps({
 <style scoped>
 .chat-tool-call {
   margin: 8px 0;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--el-fill-color, rgba(255, 255, 255, 0.04));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
   border-radius: var(--radius-md, 12px);
   padding: 0 12px;
+}
+
+/* 浅色模式：更柔和的浅紫底，与白底主体协调 */
+html:not(.dark) .chat-tool-call {
+  background: rgba(99, 102, 241, 0.04);
+  border-color: rgba(99, 102, 241, 0.12);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* 移除 el-collapse 自带 border，避免与父元素 border 重叠 */
+.chat-tool-call :deep(.el-collapse) {
+  border: none;
+}
+
+.chat-tool-call :deep(.el-collapse-item__header),
+.chat-tool-call :deep(.el-collapse-item__wrap) {
+  border-bottom: none;
+  background: transparent;
 }
 
 .tool-header {
@@ -38,7 +57,7 @@ defineProps({
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--accent-primary-light, #818cf8);
+  color: var(--accent-primary, #6366f1);
   font-weight: 500;
 }
 
