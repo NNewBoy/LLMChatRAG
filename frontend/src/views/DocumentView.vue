@@ -1,13 +1,6 @@
 <template>
-  <div class="document-view">
-    <!-- 顶部导航栏 -->
-    <AppHeader :current-mode="currentMode" title="文档管理 & 错题集">
-      <template #right>
-        <el-button :icon="Setting" text @click="settingsVisible = true" title="配置" />
-      </template>
-    </AppHeader>
-
-    <div class="document-body">
+  <AppLayout current-mode="documents" title="文档管理 & 错题集">
+    <div class="document-content">
       <el-tabs v-model="activeTab" class="document-tabs">
         <!-- 文档管理 Tab -->
         <el-tab-pane label="文档管理" name="documents">
@@ -41,27 +34,25 @@
       </el-tabs>
     </div>
 
-    <!-- 配置弹窗（主题切换） -->
-    <SettingsDialog v-model="settingsVisible" />
-  </div>
+    <template #settings="{ visible, setVisible }">
+      <SettingsDialog :model-value="visible" @update:model-value="setVisible" />
+    </template>
+  </AppLayout>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Setting } from '@element-plus/icons-vue'
 import { useDocumentStore } from '../stores/document'
 import DocumentUpload from '../components/document/DocumentUpload.vue'
 import DocumentList from '../components/document/DocumentList.vue'
 import BadCaseEditor from '../components/rag/BadCaseEditor.vue'
-import AppHeader from '../components/common/AppHeader.vue'
 import SettingsDialog from '../components/common/SettingsDialog.vue'
+import AppLayout from '../components/common/AppLayout.vue'
 
 const docStore = useDocumentStore()
 
-const currentMode = ref('documents')
 const activeTab = ref('documents')
-const settingsVisible = ref(false)
 
 onMounted(async () => {
   await docStore.fetchDocuments()
@@ -108,19 +99,9 @@ async function handleUpdateBadCase({ id, correct_answer, use_as_example }) {
 </script>
 
 <style scoped>
-.document-view {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-.document-body {
+.document-content {
   flex: 1;
-  overflow-y: auto;
   padding: 24px;
-  background: var(--bg-main);
-  position: relative;
-  z-index: 1;
 }
 
 .document-tabs {
@@ -137,7 +118,7 @@ async function handleUpdateBadCase({ id, correct_answer, use_as_example }) {
 }
 
 @media (max-width: 768px) {
-  .document-body {
+  .document-content {
     padding: 12px;
   }
 }

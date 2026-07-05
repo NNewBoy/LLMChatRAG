@@ -1,106 +1,77 @@
 <template>
-  <div class="rag-view">
-    <!-- 顶部导航栏 -->
-    <AppHeader :current-mode="currentMode" title="LLMChatRAG - RAG 对话">
-      <template #left>
-        <el-button class="menu-btn" :icon="Fold" text @click="sidebarVisible = true" />
-      </template>
-      <template #right>
-        <el-button :icon="Setting" text @click="settingsVisible = true" title="配置" />
-      </template>
-    </AppHeader>
+  <AppLayout v-model:sidebar="sidebarVisible" current-mode="rag" title="LLMChatRAG - RAG 对话">
+    <template #sidebar>
+      <ChatSidebar
+        mode="rag"
+        :conversations="store.conversations"
+        :current-id="store.currentConversationId"
+        @new-chat="handleNewChat"
+        @select="handleSelect"
+        @delete="store.deleteConversation"
+        @rename="handleRename"
+      />
+    </template>
 
-    <div class="rag-body">
-      <!-- 侧边栏 -->
-      <div class="sidebar-pc">
-        <ChatSidebar
-          mode="rag"
-          :conversations="store.conversations"
-          :current-id="store.currentConversationId"
-          @new-chat="handleNewChat"
-          @select="handleSelect"
-          @delete="store.deleteConversation"
-          @rename="handleRename"
-        />
-      </div>
-
-      <el-drawer v-model="sidebarVisible" direction="ltr" size="280px" :show-close="false">
-        <ChatSidebar
-          mode="rag"
-          :conversations="store.conversations"
-          :current-id="store.currentConversationId"
-          @new-chat="handleNewChat"
-          @select="handleSelect"
-          @delete="store.deleteConversation"
-          @rename="handleRename"
-        />
-      </el-drawer>
-
-      <!-- 对话区 -->
-      <div class="rag-main">
-        <!-- 消息列表 -->
-        <ChatMessageList
-          ref="messageListRef"
-          :messages="store.messages"
-          :is-streaming="store.isStreaming"
-          :show-feedback="true"
-          empty-text="开始 RAG 对话，基于上传文档进行问答"
-          @regenerate="handleRegenerate"
-          @followup="handleFollowup"
-          @delete="store.deleteMessage"
-          @feedback="handleFeedback"
-        />
-
-        <!-- 输入区 -->
-        <ChatInput
-          mode="rag"
-          :is-streaming="store.isStreaming"
-          @send="handleSend"
-          @stop="store.stopGeneration"
-        />
-      </div>
-    </div>
-
-    <!-- 配置弹窗 -->
-    <SettingsDialog
-      v-model="settingsVisible"
-      :model="store.selectedModel"
-      :models="llmModels"
-      :disabled="store.isStreaming"
-      :show-rag="true"
-      :embedding-model="store.selectedEmbeddingModel"
-      :embedding-models="store.availableEmbeddingModels"
-      :query-rewriting="store.enableQueryRewriting"
-      :hybrid-search="store.enableHybridSearch"
-      :reranking="store.enableReranking"
-      @update:model="store.setSelectedModel"
-      @update:embeddingModel="store.setSelectedEmbeddingModel"
-      @update:queryRewriting="store.setEnableQueryRewriting"
-      @update:hybridSearch="store.setEnableHybridSearch"
-      @update:reranking="store.setEnableReranking"
+    <ChatMessageList
+      ref="messageListRef"
+      :messages="store.messages"
+      :is-streaming="store.isStreaming"
+      :show-feedback="true"
+      empty-text="开始 RAG 对话，基于上传文档进行问答"
+      @regenerate="handleRegenerate"
+      @followup="handleFollowup"
+      @delete="store.deleteMessage"
+      @feedback="handleFeedback"
     />
-  </div>
+
+    <template #footer>
+      <ChatInput
+        mode="rag"
+        :is-streaming="store.isStreaming"
+        @send="handleSend"
+        @stop="store.stopGeneration"
+      />
+    </template>
+
+    <template #settings="{ visible, setVisible }">
+      <SettingsDialog
+        :model-value="visible"
+        @update:model-value="setVisible"
+        :model="store.selectedModel"
+        :models="llmModels"
+        :disabled="store.isStreaming"
+        :show-rag="true"
+        :embedding-model="store.selectedEmbeddingModel"
+        :embedding-models="store.availableEmbeddingModels"
+        :query-rewriting="store.enableQueryRewriting"
+        :hybrid-search="store.enableHybridSearch"
+        :reranking="store.enableReranking"
+        @update:model="store.setSelectedModel"
+        @update:embeddingModel="store.setSelectedEmbeddingModel"
+        @update:queryRewriting="store.setEnableQueryRewriting"
+        @update:hybridSearch="store.setEnableHybridSearch"
+        @update:reranking="store.setEnableReranking"
+      />
+    </template>
+  </AppLayout>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Fold, Setting } from '@element-plus/icons-vue'
 import { useRagStore } from '../stores/rag'
 import { chatApi } from '../api/chat'
 import ChatSidebar from '../components/chat/ChatSidebar.vue'
 import ChatMessageList from '../components/chat/ChatMessageList.vue'
 import ChatInput from '../components/chat/ChatInput.vue'
 import SettingsDialog from '../components/common/SettingsDialog.vue'
-import AppHeader from '../components/common/AppHeader.vue'
+import AppLayout from '../components/common/AppLayout.vue'
 
 const store = useRagStore()
 const route = useRoute()
 const router = useRouter()
 
 const sidebarVisible = ref(false)
-const settingsVisible = ref(false)
-const currentMode = ref('rag')
 const llmModels = ref([])
 const messageListRef = ref(null)
 
@@ -159,71 +130,3 @@ function handleFeedback({ id, isCorrect }) {
   store.submitFeedback(id, isCorrect)
 }
 </script>
-
-<style scoped>
-.rag-view {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  position: relative;
-  z-index: 1;
-}
-
-.rag-body {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-.sidebar-pc {
-  width: 280px;
-  border-right: 1px solid var(--glass-border, rgba(255,255,255,0.1));
-  background: var(--glass-bg, rgba(255,255,255,0.06));
-  backdrop-filter: blur(var(--glass-blur, 20px));
-  -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
-}
-
-.rag-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-main);
-}
-
-.message-list-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 24px;
-}
-
-.messages {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
-/* 移动端 drawer：移除 body padding 和 header */
-:deep(.el-drawer__body) {
-  padding: 0;
-}
-
-:deep(.el-drawer__header) {
-  display: none;
-}
-
-@media (max-width: 768px) {
-  .sidebar-pc {
-    display: none;
-  }
-  .message-list-container {
-    padding: 0 12px;
-  }
-}
-</style>

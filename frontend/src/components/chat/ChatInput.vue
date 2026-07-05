@@ -1,6 +1,6 @@
 <template>
   <div class="chat-input">
-    <div class="input-bubble">
+    <div class="input-bubble glass">
       <!-- 上层：输入区 -->
       <div class="input-area">
         <el-input
@@ -108,32 +108,10 @@ function handleSend() {
 
 /* 气泡框 */
 .input-bubble {
-  background: var(--glass-bg, rgba(255, 255, 255, 0.06));
-  backdrop-filter: blur(var(--glass-blur, 20px));
-  -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-lg, 16px);
   padding: 8px 12px 4px;
   max-width: 800px;
   margin: 0 auto;
   transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-/* 浅色模式：白色背景 + 阴影 */
-html:not(.dark) .input-bubble {
-  background: #ffffff;
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
-}
-
-html:not(.dark) .input-bubble:focus-within {
-  border-color: var(--accent-primary);
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08), 0 0 0 3px var(--accent-primary-glow);
-}
-
-.input-bubble:focus-within {
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 /* 上层输入区 */

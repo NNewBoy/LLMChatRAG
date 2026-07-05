@@ -1,5 +1,5 @@
 <template>
-  <div class="app-header">
+  <div class="app-header glass">
     <div class="header-left">
       <slot name="left" />
       <span class="app-title">{{ title }}</span>
@@ -52,13 +52,8 @@ function onChange(mode) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  height: 56px;
-  border-bottom: 1px solid var(--glass-border);
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
+  padding: 0 24px;
+  height: 58px;
   z-index: 10;
 }
 
@@ -137,7 +132,6 @@ function onChange(mode) {
 
 :deep(.menu-btn) {
   display: none;
-  color: var(--text-secondary);
 }
 
 :deep(.el-button.is-text) {
@@ -191,8 +185,7 @@ function onChange(mode) {
 /* 小屏手机适配 */
 @media (max-width: 480px) {
   .app-header {
-    padding: 0 8px;
-    height: 56px;
+    height: 44px;
   }
 
   /* 小屏仍保持 44px 触摸目标，仅缩减水平内边距 */

@@ -34,10 +34,15 @@ defineEmits(['regenerate', 'followup', 'delete', 'feedback'])
 
 const containerRef = ref(null)
 
-// 自动滚动到底部
+// 自动滚动到底部（向上查找 el-scrollbar 的滚动容器）
 function scrollToBottom() {
   nextTick(() => {
-    if (containerRef.value) {
+    if (!containerRef.value) return
+    const wrap = containerRef.value.closest('.el-scrollbar__wrap')
+    if (wrap) {
+      wrap.scrollTop = wrap.scrollHeight
+    } else {
+      // 兜底：直接滚动自身
       containerRef.value.scrollTop = containerRef.value.scrollHeight
     }
   })
@@ -65,7 +70,6 @@ defineExpose({ scrollToBottom })
 <style scoped>
 .chat-message-list {
   flex: 1;
-  overflow-y: auto;
   padding: 0 24px;
 }
 

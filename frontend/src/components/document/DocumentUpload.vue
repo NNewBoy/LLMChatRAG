@@ -83,23 +83,25 @@ async function customUpload(options) {
 
 /* 覆盖 el-upload 拖拽区深色主题 */
 :deep(.el-upload-dragger) {
-  background: var(--glass-bg, rgba(255, 255, 255, 0.06));
-  backdrop-filter: blur(var(--glass-blur, 20px));
-  -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
-  border: 1.5px dashed var(--glass-border, rgba(255, 255, 255, 0.15));
-  border-radius: var(--radius-lg, 16px);
-  transition: border-color 0.2s, background 0.2s;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass);
+  transition: background 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
   padding: 0;
 }
 
 :deep(.el-upload-dragger:hover) {
   border-color: var(--accent-primary, #6366f1);
-  background: rgba(99, 102, 241, 0.08);
+  background: var(--glass-bg-hover);
 }
 
 :deep(.el-upload-dragger.is-dragover) {
   border-color: var(--accent-primary, #6366f1);
-  background: rgba(99, 102, 241, 0.12);
+  background: var(--glass-bg-hover);
 }
 
 /* 移动端适配 */

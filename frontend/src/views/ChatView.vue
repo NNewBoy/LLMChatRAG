@@ -1,90 +1,65 @@
 <template>
-  <div class="chat-view">
-    <!-- 顶部导航栏 -->
-    <AppHeader :current-mode="currentMode" title="LLMChatRAG">
-      <template #left>
-        <el-button class="menu-btn" :icon="Fold" text @click="sidebarVisible = true" />
-      </template>
-      <template #right>
-        <el-button :icon="Setting" text @click="settingsVisible = true" title="配置" />
-      </template>
-    </AppHeader>
+  <AppLayout v-model:sidebar="sidebarVisible" current-mode="chat" title="LLMChatRAG">
+    <template #sidebar>
+      <ChatSidebar
+        :conversations="store.conversations"
+        :current-id="store.currentConversationId"
+        @new-chat="handleNewChat"
+        @select="handleSelect"
+        @delete="store.deleteConversation"
+        @rename="handleRename"
+      />
+    </template>
 
-    <div class="chat-body">
-      <!-- 侧边栏 (PC 端固定，移动端抽屉) -->
-      <div class="sidebar-pc">
-        <ChatSidebar
-          :conversations="store.conversations"
-          :current-id="store.currentConversationId"
-          @new-chat="handleNewChat"
-          @select="handleSelect"
-          @delete="store.deleteConversation"
-          @rename="handleRename"
-        />
-      </div>
-
-      <el-drawer v-model="sidebarVisible" direction="ltr" size="280px" :show-close="false">
-        <ChatSidebar
-          :conversations="store.conversations"
-          :current-id="store.currentConversationId"
-          @new-chat="handleNewChat"
-          @select="handleSelect"
-          @delete="store.deleteConversation"
-          @rename="handleRename"
-        />
-      </el-drawer>
-
-      <!-- 对话区 -->
-      <div class="chat-main">
-        <ChatMessageList
-          :messages="store.messages"
-          :is-streaming="store.isStreaming"
-          @regenerate="handleRegenerate"
-          @followup="handleFollowup"
-          @delete="store.deleteMessage"
-        />
-        <ChatInput
-          :model="store.selectedModel"
-          :models="store.availableModels"
-          :is-streaming="store.isStreaming"
-          @send="handleSend"
-          @stop="store.stopGeneration"
-        />
-      </div>
-    </div>
-
-    <!-- 配置弹窗 -->
-    <SettingsDialog
-      v-model="settingsVisible"
-      :model="store.selectedModel"
-      :models="store.availableModels"
-      :disabled="store.isStreaming"
-      :show-intent="true"
-      :intent="store.enableIntentRecognition"
-      @update:model="store.setSelectedModel"
-      @update:intent="store.setEnableIntentRecognition"
+    <ChatMessageList
+      :messages="store.messages"
+      :is-streaming="store.isStreaming"
+      @regenerate="handleRegenerate"
+      @followup="handleFollowup"
+      @delete="store.deleteMessage"
     />
-  </div>
+
+    <template #footer>
+      <ChatInput
+        :model="store.selectedModel"
+        :models="store.availableModels"
+        :is-streaming="store.isStreaming"
+        @send="handleSend"
+        @stop="store.stopGeneration"
+      />
+    </template>
+
+    <template #settings="{ visible, setVisible }">
+      <SettingsDialog
+        :model-value="visible"
+        @update:model-value="setVisible"
+        :model="store.selectedModel"
+        :models="store.availableModels"
+        :disabled="store.isStreaming"
+        :show-intent="true"
+        :intent="store.enableIntentRecognition"
+        @update:model="store.setSelectedModel"
+        @update:intent="store.setEnableIntentRecognition"
+      />
+    </template>
+  </AppLayout>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Fold, Setting } from '@element-plus/icons-vue'
 import { useChatStore } from '../stores/chat'
 import ChatSidebar from '../components/chat/ChatSidebar.vue'
 import ChatMessageList from '../components/chat/ChatMessageList.vue'
 import ChatInput from '../components/chat/ChatInput.vue'
 import SettingsDialog from '../components/common/SettingsDialog.vue'
-import AppHeader from '../components/common/AppHeader.vue'
+import AppLayout from '../components/common/AppLayout.vue'
 
 const router = useRouter()
 const route = useRoute()
 const store = useChatStore()
 
 const sidebarVisible = ref(false)
-const settingsVisible = ref(false)
-const currentMode = ref('chat')
 
 onMounted(async () => {
   await store.fetchModels()
@@ -132,50 +107,3 @@ function handleFollowup(messageId) {
   }
 }
 </script>
-
-<style scoped>
-.chat-view {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  position: relative;
-  z-index: 1;
-}
-
-.chat-body {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-.sidebar-pc {
-  width: 280px;
-  border-right: 1px solid var(--glass-border, rgba(255,255,255,0.1));
-  background: var(--glass-bg, rgba(255,255,255,0.06));
-  backdrop-filter: blur(var(--glass-blur, 20px));
-  -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
-}
-
-.chat-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-main);
-}
-
-@media (max-width: 768px) {
-  .sidebar-pc {
-    display: none;
-  }
-}
-
-/* 移动端 drawer：移除 body padding 和 header */
-:deep(.el-drawer__body) {
-  padding: 0;
-}
-
-:deep(.el-drawer__header) {
-  display: none;
-}
-</style>
