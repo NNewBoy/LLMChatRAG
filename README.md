@@ -20,14 +20,16 @@
 - **统一时区**：全局使用 UTC+8 东八区时间，避免服务器时区差异
 - **统一配置**：Chat 和 RAG 页面均通过 header 设置弹窗统一管理模型与检索参数
 - **主题切换**：Glassmorphism 风格支持深色/浅色双主题，设置弹窗一键切换，支持 URI 参数 `?theme=light|dark` 外部指定主题
-- **响应式设计**：兼容 PC 端与移动端，自适应布局
-- **UI 设计**：Glassmorphism + Dark/Light Mode 双主题，玻璃态质感
+- **响应式设计**：兼容 PC 端与移动端，自适应布局，移动端导航标签自动缩写、触摸目标优化
+- **UI 设计**：Glassmorphism + Dark/Light Mode 双主题，玻璃态质感；统一 AppLayout 布局，侧边栏折叠状态持久化，router-link 导航激活态指示
+- **首屏性能优化**：Element Plus 按需导入 + 独立 chunk 分包，首屏 gzip < 170KB，marked/highlight.js 懒加载
 
 ## 技术栈
 
 ### 前端
-- Vue 3 + Vite + Element Plus + Pinia + Vue Router + Axios
-- marked / highlight.js (Markdown 渲染与代码高亮)
+- Vue 3 + Vite + Element Plus（按需导入）+ Pinia + Vue Router + Axios
+- marked / highlight.js (Markdown 渲染与代码高亮，路由懒加载)
+- unplugin-vue-components / unplugin-auto-import (组件自动按需导入)
 
 ### 后端
 - Python 3.11+ + FastAPI + SQLite (aiosqlite) + FAISS
