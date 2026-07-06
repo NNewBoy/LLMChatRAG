@@ -15,10 +15,10 @@
   --bg-main: #ffffff;
   /* 主内容区：纯白（chat-main/rag-main/document-body） */
 
-  /* 背景光斑 */
-  --bg-blob-1: #a5b4fc;
-  --bg-blob-2: #fbcfe8;
-  --bg-blob-3: #bbf7d0;
+  /* 背景光斑 — 白紫科技风：靛蓝/紫色辉光 */
+  --bg-blob-1: rgba(139, 92, 246, 0.15);
+  --bg-blob-2: rgba(99, 102, 241, 0.12);
+  --bg-blob-3: rgba(168, 85, 247, 0.1);
 
   /* Glass surfaces - Light */
   --glass-bg: rgba(255, 255, 255, 0.55);
@@ -74,10 +74,10 @@ html.dark {
   --bg-main: #12121a;
   /* 主内容区：深色表面 */
 
-  /* 背景光斑 */
-  --bg-blob-1: rgba(99, 102, 241, 0.25);
-  --bg-blob-2: rgba(236, 72, 153, 0.18);
-  --bg-blob-3: rgba(34, 197, 94, 0.16);
+  /* 背景光斑 — 星空：星云辉光 */
+  --bg-blob-1: rgba(99, 102, 241, 0.18);
+  --bg-blob-2: rgba(139, 92, 246, 0.14);
+  --bg-blob-3: rgba(59, 130, 246, 0.12);
 
   /* Glass surfaces - Dark */
   --glass-bg: rgba(30, 32, 44, 0.45);
