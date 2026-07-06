@@ -83,9 +83,6 @@ async function customUpload(options) {
 
 /* 覆盖 el-upload 拖拽区深色主题 */
 :deep(.el-upload-dragger) {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--saturate));
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-glass);

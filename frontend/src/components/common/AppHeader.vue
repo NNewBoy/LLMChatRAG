@@ -4,18 +4,19 @@
       <slot name="left" />
       <span class="app-title">{{ title }}</span>
     </div>
-    <nav class="header-nav" role="tablist" aria-label="主导航">
-      <el-button
-        v-for="tab in tabs"
-        :key="tab.value"
-        :type="currentMode === tab.value ? 'primary' : 'default'"
-        :class="['nav-tab', { 'is-active': currentMode === tab.value }]"
-        role="tab"
-        :aria-selected="currentMode === tab.value"
-        @click="onChange(tab.value)"
+    <nav class="header-nav" aria-label="主导航">
+      <router-link
+        v-for="item in menuItems"
+        :key="item.path"
+        :to="item.path"
+        class="nav-link"
+        :class="{ active: isActive(item.path) }"
+        @click="emit('switch-mode', item.value)"
       >
-        {{ tab.label }}
-      </el-button>
+        <el-icon :size="18"><component :is="item.icon" /></el-icon>
+        <span class="nav-label">{{ item.label }}</span>
+        <span class="nav-label--short">{{ item.shortLabel }}</span>
+      </router-link>
     </nav>
     <div class="header-right">
       <slot name="right" />
@@ -24,7 +25,8 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import { ChatDotRound, Collection, Folder } from '@element-plus/icons-vue'
 
 defineProps({
   currentMode: { type: String, required: true },
@@ -34,16 +36,16 @@ defineProps({
 const emit = defineEmits(['switch-mode'])
 
 const router = useRouter()
+const route = useRoute()
 
-const tabs = [
-  { value: 'chat', label: '普通对话' },
-  { value: 'rag', label: 'RAG 对话' },
-  { value: 'documents', label: '文档管理' },
+const menuItems = [
+  { value: 'chat', path: '/chat', label: '普通对话', shortLabel: '对话', icon: ChatDotRound },
+  { value: 'rag', path: '/rag', label: 'RAG 对话', shortLabel: 'RAG', icon: Collection },
+  { value: 'documents', path: '/documents', label: '文档管理', shortLabel: '文档', icon: Folder },
 ]
 
-function onChange(mode) {
-  emit('switch-mode', mode)
-  router.push(`/${mode}`)
+function isActive(path) {
+  return route.path.startsWith(path)
 }
 </script>
 
@@ -61,46 +63,45 @@ function onChange(mode) {
   flex: 1;
   display: flex;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-/* 分段控件 - 基于 el-button，每个按钮自带玻璃底+边框 */
-.header-nav :deep(.nav-tab.el-button) {
-  min-height: 36px;
-  padding: 0 18px;
+.nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
-  background: var(--glass-bg);
-  transition: all 0.2s ease;
-  margin: 0;
+  color: var(--text-muted);
+  transition: color 150ms cubic-bezier(0.16, 1, 0.3, 1), background 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
 }
 
-/* 未激活态 hover */
-.header-nav :deep(.nav-tab.el-button:not(.is-active):hover) {
-  color: var(--text-primary);
-  background: var(--glass-bg-hover);
-  border-color: var(--glass-border-hover);
+.nav-link:hover {
+  color: var(--accent-primary-light);
 }
 
-/* 激活态 - 强调色填充 */
-.header-nav :deep(.nav-tab.el-button.is-active) {
-  color: #fff;
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-  box-shadow: 0 2px 8px var(--accent-primary-glow);
+.nav-link.active {
+  color: var(--accent-primary-light);
 }
 
-.header-nav :deep(.nav-tab.el-button.is-active:hover) {
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
   background: var(--accent-primary-light);
-  border-color: var(--accent-primary-light);
 }
 
-/* 按下反馈 */
-.header-nav :deep(.nav-tab.el-button:active) {
-  transform: scale(0.97);
+.nav-label--short {
+  display: none;
 }
 
 .header-left {
@@ -134,15 +135,6 @@ function onChange(mode) {
   display: none;
 }
 
-:deep(.el-button.is-text) {
-  color: var(--text-muted);
-}
-
-:deep(.el-button.is-text:hover) {
-  color: var(--text-primary);
-  background: var(--glass-bg-hover);
-}
-
 /* 平板适配 */
 @media (max-width: 1024px) {
   .header-left {
@@ -171,14 +163,24 @@ function onChange(mode) {
   .header-nav {
     flex: 0 0 auto;
     gap: 2px;
-    padding: 3px;
   }
 
-  /* 移动端：触摸目标 ≥44px，加大字号与内边距 */
-  .header-nav :deep(.nav-tab.el-button) {
-    min-height: 44px;
-    padding: 0 16px;
-    font-size: 15px;
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .nav-label {
+    display: none;
+  }
+
+  .nav-label--short {
+    display: inline;
+  }
+
+  .nav-link.active::after {
+    left: 8px;
+    right: 8px;
   }
 }
 
@@ -186,12 +188,12 @@ function onChange(mode) {
 @media (max-width: 480px) {
   .app-header {
     height: 44px;
+    padding: 0 16px;
   }
 
-  /* 小屏仍保持 44px 触摸目标，仅缩减水平内边距 */
-  .header-nav :deep(.nav-tab.el-button) {
-    padding: 0 12px;
-    font-size: 14px;
+  .nav-link {
+    padding: 6px 10px;
+    font-size: 12px;
   }
 }
 </style>

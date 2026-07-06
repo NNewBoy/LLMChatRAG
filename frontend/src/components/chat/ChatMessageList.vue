@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted } from 'vue'
 import ChatMessage from './ChatMessage.vue'
 
 const props = defineProps({
@@ -62,6 +62,11 @@ watch(
 // 流式结束后操作按钮出现，需要滚动露出
 watch(() => props.isStreaming, (val) => {
   if (!val) scrollToBottom()
+})
+
+// 挂载时若有消息则滚到底部（切换 tab 时 store 中已有数据，watcher 不会触发）
+onMounted(() => {
+  if (props.messages.length > 0) scrollToBottom()
 })
 
 defineExpose({ scrollToBottom })

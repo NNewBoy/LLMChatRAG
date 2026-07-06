@@ -114,6 +114,11 @@ function handleSend() {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+.input-bubble:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08), 0 0 0 3px var(--accent-primary-glow);
+}
+
 /* 上层输入区 */
 .input-area {
   max-height: 40vh;

@@ -17,7 +17,7 @@
                 <button
                   v-if="$slots.sidebar"
                   class="collapse-btn icon-btn"
-                  @click="sidebarCollapsed = !sidebarCollapsed"
+                  @click="appStore.toggleSidebar()"
                   :aria-label="sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'"
                   :title="sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'"
                 >
@@ -74,6 +74,8 @@
 import { ref } from 'vue'
 import { Fold, Expand, Setting } from '@element-plus/icons-vue'
 import AppHeader from './AppHeader.vue'
+import { useAppStore } from '../../stores/app'
+import { storeToRefs } from 'pinia'
 
 defineProps({
   currentMode: { type: String, required: true },
@@ -83,7 +85,8 @@ defineProps({
 
 const emit = defineEmits(['update:sidebar'])
 
-const sidebarCollapsed = ref(false)
+const appStore = useAppStore()
+const { sidebarCollapsed } = storeToRefs(appStore)
 const settingsVisible = ref(false)
 const setVisible = (v) => {
   settingsVisible.value = v

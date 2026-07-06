@@ -1,7 +1,7 @@
 <template>
   <AppLayout current-mode="documents" title="文档管理 & 错题集">
     <div class="document-content">
-      <el-tabs v-model="activeTab" class="document-tabs">
+      <el-tabs v-model="activeTab" class="document-tabs glass">
         <!-- 文档管理 Tab -->
         <el-tab-pane label="文档管理" name="documents">
           <div class="tab-content">
@@ -107,6 +107,7 @@ async function handleUpdateBadCase({ id, correct_answer, use_as_example }) {
 .document-tabs {
   max-width: 1000px;
   margin: 0 auto;
+  padding: 12px;
 }
 
 .tab-content {
