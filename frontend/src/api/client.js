@@ -5,6 +5,20 @@ const apiClient = axios.create({
   timeout: 30000,
 })
 
+// 独立实例，直连 /api 不走 BASE_URL 前缀
+const visitClient = axios.create({
+  baseURL: '/api',
+  timeout: 10000,
+})
+
+/**
+ * 记录访客
+ * @param {object} body - 请求体 { title: string }
+ */
+export function recordVisit(body = { title: 'AI聊天与RAG' }) {
+  return visitClient.post('/v1/visit/record', body)
+}
+
 /**
  * SSE 流式请求封装
  * @param {string} url - 请求 URL
