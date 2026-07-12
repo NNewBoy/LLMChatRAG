@@ -19,10 +19,20 @@ class AgentFactory:
     _mcp_tools = None
 
     @classmethod
-    def set_rag_pipeline(cls, rag_pipeline):
-        """注入 RAG pipeline 实例"""
+    def set_rag_pipeline(cls, rag_pipeline=None, llm=None):
+        """注入或按需创建 RAG pipeline 实例
+
+        Args:
+            rag_pipeline: 已创建的 RAGPipeline 实例，传入则直接缓存
+            llm: 当 rag_pipeline 为 None 时，使用此 llm 按需创建并缓存
+        """
+        if rag_pipeline is None and llm is not None:
+            from rag.pipeline import RAGPipeline
+            rag_pipeline = RAGPipeline(llm)
+            logger.info("RAG pipeline 按需创建并缓存")
         cls._rag_pipeline = rag_pipeline
-        logger.info("RAG pipeline 已注入 AgentFactory")
+        if rag_pipeline is not None:
+            logger.info("RAG pipeline 已注入 AgentFactory")
 
     @classmethod
     async def get_mcp_tools(cls):
@@ -161,7 +171,9 @@ class AgentFactory:
 
         # 准备工具列表
         tools = []
-        if enable_rag and cls._rag_pipeline:
+        if enable_rag:
+            if cls._rag_pipeline is None:
+                cls.set_rag_pipeline(llm=llm)
             rag_tool = create_rag_tool(cls._rag_pipeline)
             tools.append(rag_tool)
             logger.info("RAG 工具已加载 (DeepAgents)")

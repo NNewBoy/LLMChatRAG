@@ -202,6 +202,7 @@ class ChatService:
         thinking_parts = []
         tool_call_parts = []
         full_content = ""
+        rag_user_content = None  # RAG 路径下 build_prompt 已构建的用户消息内容
 
         try:
             # 获取对话历史（排除当前用户消息，避免重复）
@@ -212,8 +213,8 @@ class ChatService:
             llm = await AgentFactory.get_llm(model)
             logger.info(f"LLM 实例创建: model={model}")
 
-            # 意图识别（如果启用）
-            if enable_intent_recognition:
+            # 意图识别（如果启用且非 DeepAgents 框架，DeepAgents 内部通过工具自动处理 RAG）
+            if enable_intent_recognition and settings.agent_framework != "deepagents":
                 logger.info("开始意图识别...")
                 yield sse_event("thinking", {"content": "正在分析问题意图..."})
                 intent_result = await self.intent_router.classify(content, llm, history)
@@ -233,10 +234,10 @@ class ChatService:
                         "timestamp": now_iso(),
                     })
 
-                    # 执行 RAG 检索
-                    from rag.pipeline import RAGPipeline
-                    rag = RAGPipeline(llm)
-                    results = await rag.search_only(content)
+                    # 执行 RAG 检索（复用 AgentFactory 缓存的 RAG pipeline）
+                    if AgentFactory._rag_pipeline is None:
+                        AgentFactory.set_rag_pipeline(llm=llm)
+                    results = await AgentFactory._rag_pipeline.search_only(content)
 
                     if results:
                         rag_context = "\n\n".join(
@@ -251,11 +252,12 @@ class ChatService:
                             "timestamp": now_iso(),
                         })
 
-                        # 构建 RAG 增强的 prompt
+                        # 使用 Generator.build_prompt 构建 RAG prompt
                         from rag.generator import Generator
                         gen = Generator(llm)
-                        prompt = gen.build_prompt(content, results, [])
-                        messages = [{"role": "system", "content": prompt}]
+                        rag_messages = gen.build_prompt(content, results, [])
+                        messages = [{"role": "system", "content": rag_messages[0].content}]
+                        rag_user_content = rag_messages[1].content
                         logger.info(f"Chat RAG 路径: 检索到 {len(results)} 条文档, 已构建 RAG prompt")
                     else:
                         yield sse_event("tool_result", {
@@ -275,7 +277,10 @@ class ChatService:
                     messages.append({"role": msg["role"], "content": msg["content"]})
 
             # 添加当前用户消息
-            if image:
+            if rag_user_content is not None:
+                # RAG 路径: build_prompt 已将文档上下文与用户问题合并
+                messages.append({"role": "user", "content": rag_user_content})
+            elif image:
                 # 多模态: 文本 + 图片合并为一条消息
                 image_url = image if image.startswith("data:") else f"data:image/jpeg;base64,{image}"
                 messages.append({"role": "user", "content": [
@@ -309,7 +314,7 @@ class ChatService:
                 # DeepAgents 内部自动处理工具调用循环（规划、子代理、文件系统）
                 logger.info("使用 DeepAgents 框架")
                 async for event_type, data in AgentFactory.create_deep_agent_stream(
-                    llm, lc_messages, enable_rag=True,
+                    llm, lc_messages, enable_rag=enable_intent_recognition,
                 ):
                     if self.is_stopped(assistant_msg_id):
                         yield sse_event("thinking", {"content": "生成已停止"})

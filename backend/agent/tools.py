@@ -1,5 +1,6 @@
 """Agent 工具定义 - RAG 工具"""
 
+from langchain_core.tools import tool
 from utils.logger import logger
 
 
@@ -8,6 +9,7 @@ def create_rag_tool(rag_pipeline):
     创建 RAG 检索工具
     Agent 调用此工具检索知识库文档
     """
+    @tool
     async def rag_search(query: str, top_k: int = 5) -> str:
         """在知识库中检索相关文档。
 
