@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import App from './App.vue'
 import router from './router'
+import { recordVisit } from './api/client'
 import './assets/styles/theme.css'
 import './assets/styles/main.css'
 
@@ -11,3 +12,6 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.mount('#app')
+
+// 记录访客
+recordVisit().catch(() => { })
