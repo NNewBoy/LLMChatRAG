@@ -53,6 +53,8 @@ pipeline {
                         export KUBECONFIG=\$KUBECONFIG
                         # 1. 应用本地业务资源（首次部署需要，幂等操作）
                         #    注意：namespace 与 redis 由 LLMBLOG 的 k8s/ 共用，不在此重复 apply
+                        #    注意：secret.yaml 含敏感 API Key，不通过 Jenkins apply（避免占位符覆盖真实值）
+                        #          Secret 更新方式见 DEPLOY_UBUNTU.md §12.8
                         kubectl apply -f k8s/configmap.yaml
                         kubectl apply -f k8s/pvc.yaml
                         # 2. 先 apply Deployment/Service（不存在则创建，存在则更新）

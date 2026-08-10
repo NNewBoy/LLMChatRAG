@@ -1,4 +1,4 @@
-# LLMChatRAG 配置
+# LLMChatRAG 非敏感配置（可安全提交 Git，Jenkins 自动 apply）
 # 注意：Namespace 与 Redis 由 LLMBLOG 的 k8s/ 共用（namespace=app, Service=redis:6379）
 # Redis DB 分配：LLMBLOG 用 DB 0/1，LLMChatRAG 用 DB 2/3
 
@@ -19,19 +19,3 @@ data:
   AGENT_FRAMEWORK: "langchain"
   EMBEDDING_PROVIDER: "siliconflow"
   CORS_ORIGINS: "http://localhost,http://127.0.0.1"
-
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: chatrag-secret
-  namespace: app
-type: Opaque
-stringData:
-  # 生产环境必须填入真实 API Key
-  LLM_API_KEY: "sk-xxxxxxxxxxxxxxxx"
-  LLM_API_BASE_URL: "https://api.deepseek.com/v1"
-  LLM_MODEL: "deepseek-chat"
-  EMBEDDING_API_KEY: "sk-xxxxxxxx"
-  EMBEDDING_API_BASE_URL: "https://api.siliconflow.cn/v1"
-  EMBEDDING_MODEL: "BAAI/bge-large-zh-v1.5"

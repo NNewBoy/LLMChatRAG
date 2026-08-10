@@ -903,7 +903,84 @@ kubectl apply -f k8s/ingress.yaml --validate=false
 
 后续每次提交代码，Jenkins 自动构建并滚动更新 Deployment，无需手动操作。
 
-### 12.8 K8s 宿主机 Nginx 配置
+### 12.9 更新 K8s Secret（API Key 等敏感配置）
+
+> **重要**：`k8s/secret.yaml` 含 API Key 等敏感信息，已加入 `.gitignore`，**不通过 Jenkins apply**（避免 Git 中的占位符覆盖集群真实值）。需手动更新。
+
+#### 方式一：手动命令更新（推荐，简单直接）
+
+在 K8s Master 节点执行：
+
+```bash
+# 方法 A：用 kubectl create --dry-run 生成并应用（推荐，无需手动 base64 编码）
+kubectl create secret generic chatrag-secret \
+  --namespace=app \
+  --from-literal=LLM_API_KEY="sk-你的真实DeepSeek密钥" \
+  --from-literal=LLM_API_BASE_URL="https://api.deepseek.com/v1" \
+  --from-literal=LLM_MODEL="deepseek-chat" \
+  --from-literal=EMBEDDING_API_KEY="sk-你的真实硅基流动密钥" \
+  --from-literal=EMBEDDING_API_BASE_URL="https://api.siliconflow.cn/v1" \
+  --from-literal=EMBEDDING_MODEL="BAAI/bge-large-zh-v1.5" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# 方法 B：编辑本地 k8s/secret.yaml 填入真实值后 apply
+nano k8s/secret.yaml           # 把 sk-xxxxxxxx 替换为真实 API Key
+kubectl apply -f k8s/secret.yaml
+
+# 更新后重启 backend 与 celery-worker 使新 Secret 生效
+kubectl rollout restart deployment/backend-chatrag -n app
+kubectl rollout restart deployment/celery-worker-chatrag -n app
+```
+
+#### 方式二：通过 Jenkins Credentials 注入（适合团队协作）
+
+1. 在 Jenkins `Manage Jenkins → Credentials` 添加以下 Secret Text 凭据：
+
+| 凭据 ID | 说明 |
+|---------|------|
+| `chatrag-llm-api-key` | DeepSeek API Key |
+| `chatrag-embedding-api-key` | 硅基流动 Embedding API Key |
+
+2. 在 Jenkinsfile 的部署阶段追加 Secret 更新步骤（示例）：
+
+```groovy
+stage('更新 K8s Secret') {
+    steps {
+        withCredentials([
+            string(credentialsId: 'chatrag-llm-api-key', variable: 'LLM_API_KEY'),
+            string(credentialsId: 'chatrag-embedding-api-key', variable: 'EMBEDDING_API_KEY'),
+        ]) {
+            sh """
+                export KUBECONFIG=\$KUBECONFIG
+                kubectl create secret generic chatrag-secret \\
+                  --namespace=app \\
+                  --from-literal=LLM_API_KEY=\$LLM_API_KEY \\
+                  --from-literal=LLM_API_BASE_URL="https://api.deepseek.com/v1" \\
+                  --from-literal=LLM_MODEL="deepseek-chat" \\
+                  --from-literal=EMBEDDING_API_KEY=\$EMBEDDING_API_KEY \\
+                  --from-literal=EMBEDDING_API_BASE_URL="https://api.siliconflow.cn/v1" \\
+                  --from-literal=EMBEDDING_MODEL="BAAI/bge-large-zh-v1.5" \\
+                  --dry-run=client -o yaml | kubectl apply -f -
+            """
+        }
+    }
+}
+```
+
+> **注意**：方式二将 Secret 更新阶段放在「部署到 K8s 集群」阶段之前，确保 Pod 滚动更新时能读取到最新的 Secret。
+
+#### 验证 Secret 是否生效
+
+```bash
+# 查看 Secret（值已 base64 编码，不会明文显示）
+kubectl get secret chatrag-secret -n app -o jsonpath='{.data.LLM_API_KEY}' | base64 -d | head -c 10
+echo "..."   # 只显示前 10 个字符确认非占位符
+
+# 进入 Pod 验证环境变量
+kubectl exec -it deploy/backend-chatrag -n app -- env | grep LLM_API_KEY
+```
+
+### 12.10 K8s 宿主机 Nginx 配置
 
 K8s 部署完成后，宿主机 Nginx 做 SSL 终止，将请求代理到 **ingress-nginx-controller 的 NodePort**，由 Ingress 根据 Host 头路由到对应 Service。
 
@@ -954,7 +1031,7 @@ server {
 > }'
 > ```
 
-### 12.10 K8s 运维命令
+### 12.11 K8s 运维命令
 
 ```bash
 # Pod / Service / Deployment 状态
