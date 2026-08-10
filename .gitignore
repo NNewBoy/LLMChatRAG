@@ -22,6 +22,9 @@ env/
 # ── Environment Variables ──────────────────────
 backend/.env
 
+# ── K8s Secret（含敏感 API Key，本地填入真实值后不提交）──
+k8s/secret.yaml
+
 # ── Database ───────────────────────────────────
 backend/data/*.db
 backend/data/*.db-wal
