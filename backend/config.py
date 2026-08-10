@@ -59,11 +59,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_file: str = "./logs/app.log"
 
-    # Redis / Celery 配置（容器内服务名为 redis，本地开发改为 127.0.0.1）
+    # Redis / Celery 配置
+    # 同一集群多项目共用 Redis：LLMBLOG 用 DB 0/1，本项目用 DB 2/3
+    # 容器内服务名为 redis，本地开发改为 127.0.0.1
     redis_host: str = "127.0.0.1"
     redis_port: int = 6379
-    celery_broker_db: int = 0
-    celery_backend_db: int = 1
+    celery_broker_db: int = 2
+    celery_backend_db: int = 3
     # 异步任务队列名，API 与 Worker 共用
     celery_queue: str = "chatrag_queue"
 

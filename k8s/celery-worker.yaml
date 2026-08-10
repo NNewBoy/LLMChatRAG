@@ -1,30 +1,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: celery-worker
+  name: celery-worker-chatrag
   namespace: app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: celery-worker
+      app: celery-worker-chatrag
   template:
     metadata:
       labels:
-        app: celery-worker
+        app: celery-worker-chatrag
     spec:
       nodeSelector:
-        kubernetes.io/hostname: k8s-node1   # 固定到有 PV 数据的节点（SQLite hostPath 不可跨节点共享）
+        kubernetes.io/hostname: k8s-node1   # 固定到有 PV 数据的节点
       imagePullSecrets:
       - name: aliyun-acr-secret
       containers:
       - name: worker
-        image: crpi-v27gqzero2fjya51.cn-guangzhou.personal.cr.aliyuncs.com/chatrag/backend:latest
+        image: crpi-v27gqzero2fjya51.cn-guangzhou.personal.cr.aliyuncs.com/llmproject/backend_chatrag:latest
         command: ["celery"]
         args: ["-A", "celery_app", "worker", "--loglevel=info", "--concurrency=1"]
         envFrom:
-        - configMapRef: {name: app-config}
-        - secretRef: {name: app-secret}
+        - configMapRef: {name: chatrag-config}
+        - secretRef: {name: chatrag-secret}
         resources:
           requests: {cpu: 200m, memory: 256Mi}
           limits: {cpu: 500m, memory: 512Mi}
@@ -37,8 +37,8 @@ spec:
           mountPath: /app/data/uploads
       volumes:
       - name: data
-        persistentVolumeClaim: {claimName: backend-data}
+        persistentVolumeClaim: {claimName: chatrag-db-data}
       - name: faiss
-        persistentVolumeClaim: {claimName: faiss-data}
+        persistentVolumeClaim: {claimName: chatrag-faiss-data}
       - name: uploads
-        persistentVolumeClaim: {claimName: backend-uploads}
+        persistentVolumeClaim: {claimName: chatrag-uploads}

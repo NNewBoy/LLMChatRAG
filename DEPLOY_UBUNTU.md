@@ -777,8 +777,10 @@ sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 ### 12.3 配置阿里云 ACR 镜像仓库
 
 1. 登录阿里云控制台 → 容器镜像服务 ACR → 个人版
-2. 创建命名空间（如 `chatrag`）与镜像仓库（`backend`、`frontend`）
+2. 创建命名空间 `llmproject` 与镜像仓库 `backend_chatrag`、`frontend_chatrag`
 3. 记录镜像仓库地址，例如 `crpi-v27gqzero2fjya51.cn-guangzhou.personal.cr.aliyuncs.com`
+
+> **注意**：本项目的 ACR 命名空间为 `llmproject`，镜像名为 `backend_chatrag` / `frontend_chatrag`，与 LLMBLOG（命名空间 `llmblog`）独立，便于多项目共用一个 ACR 账号。
 
 ### 12.4 配置 Jenkins 凭据
 
@@ -815,32 +817,88 @@ sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 | 构建后端镜像 | `docker build -f backend/Dockerfile backend/` → 推送 ACR |
 | 构建前端镜像 | `docker build -f frontend/Dockerfile frontend/` → 推送 ACR |
 | 镜像标签 | `构建号-GitCommit短哈希`（每次唯一可追溯） |
-| 部署 K8s | `kubectl set image` 滚动更新 backend/frontend/celery-worker |
+| 部署 K8s | `kubectl set image` 滚动更新 backend-chatrag/frontend-chatrag/celery-worker-chatrag |
 | 等待完成 | `kubectl rollout status` 确认滚动更新成功 |
 
 > ARM 架构机器（如 Apple M 系列）构建时必须加 `--platform linux/amd64`，Jenkinsfile 已含此参数。
 
-### 12.7 K8s 集群一次性配置
+### 12.7 K8s 集群资源规划与端口冲突分析
+
+> **重要**：LLMBLOG 与 LLMChatRAG 同时部署在同一个 K8s 集群的 `app` 命名空间，部分基础资源共用，业务资源通过命名前缀隔离。
+
+#### 共用基础资源（来自 LLMBLOG 的 `k8s/`）
+
+| 资源 | 名称 | 说明 |
+|------|------|------|
+| Namespace | `app` | 两个项目共用 |
+| Redis Service | `redis:6379` | 两个项目共用同一 Redis 实例 |
+| ACR 拉取密钥 | `aliyun-acr-secret` | 共用 |
+
+**Redis DB 分配**（避免键冲突）：
+
+| 项目 | Broker DB | Backend DB |
+|------|-----------|-----------|
+| LLMBLOG | 0 | 1 |
+| LLMChatRAG | 2 | 3 |
+
+#### 独立业务资源（本项目 `k8s/`）
+
+| 资源 | 类型 | 名称 | 避免冲突 |
+|------|------|------|---------|
+| 配置 | ConfigMap | `chatrag-config` | 与 LLMBLOG `app-config` 区分 |
+| 密钥 | Secret | `chatrag-secret` | 与 LLMBLOG `app-secret` 区分 |
+| 存储 | PV | `pv-chatrag-db/faiss/uploads` | hostPath 为 `/data/chatrag/*`，与 LLMBLOG `/data/llmblog/*` 区分 |
+| 存储 | PVC | `chatrag-db/faiss-data/uploads` | 加 `chatrag-` 前缀 |
+| 后端 | Deployment + Service | `backend-chatrag` | 与 LLMBLOG `backend` 区分 |
+| 前端 | Deployment + Service | `frontend-chatrag` | 与 LLMBLOG `frontend` 区分 |
+| Worker | Deployment | `celery-worker-chatrag` | 与 LLMBLOG `celery-worker` 区分 |
+| 入口 | Ingress | `chatrag-ingress` | 与 LLMBLOG `app-ingress` 区分，路由 `/llmchatrag/*` 子路径 |
+
+#### Ingress 路径规划
+
+| 前缀路径 | 路由目标 | 说明 |
+|---------|---------|------|
+| `/` 和 `/api` 和 `/llmblog_uploads` | LLMBLOG `frontend` / `backend` | 由 LLMBLOG `app-ingress` 定义 |
+| `/llmchatrag` | LLMChatRAG `frontend-chatrag` | **LLMChatRAG 前端子路径** |
+| `/llmchatrag/api` | LLMChatRAG `backend-chatrag` | **LLMChatRAG API 子路径** |
+
+#### 端口冲突检查
+
+| 组件 | LLMBLOG | LLMChatRAG | 是否冲突 |
+|------|---------|------------|---------|
+| 后端容器端口 | 8000 | 8000 | **否**（K8s Service 网络隔离，ClusterIP + DNS 域名区分） |
+| 后端 Service | `backend:8000` | `backend-chatrag:8000` | **否**（不同 Service 名） |
+| 前端容器端口 | 80 | 80 | **否**（同上） |
+| Redis 实例 | 容器 6379 | 共用 | **否**（共用一个 Redis Pod，通过 DB 0-1/2-3 隔离） |
+| Ingress NodePort | 31080/31443 | 共用 | **否**（共用 ingress-nginx-controller） |
+| 数据卷 hostPath | `/data/llmblog/*` | `/data/chatrag/*` | **否**（不同目录） |
+
+> **结论**：所有端口通过 K8s Service 名称（ClusterIP + DNS）隔离，不存在端口冲突。
+
+### 12.8 K8s 集群一次性配置
 
 在 K8s Master 节点执行一次：
 
 ```bash
-# 创建 ACR 拉取密钥
+# 创建 ACR 拉取密钥（如 LLMBLOG 部署时已创建，跳过此步）
 kubectl create secret docker-registry aliyun-acr-secret \
   --namespace=app \
   --docker-server=crpi-v27gqzero2fjya51.cn-guangzhou.personal.cr.aliyuncs.com \
   --docker-username=你的ACR用户名 \
-  --docker-password=ACR访问凭证固定密码
+  --docker-password=ACR访问凭证固定密码 2>/dev/null || echo "secret 已存在，跳过"
 
-# 创建数据目录（hostPath PV 需要在节点上预先创建）
+# 创建 LLMChatRAG 数据目录（与 LLMBLOG 的 /data/llmblog 独立）
 sudo mkdir -p /data/chatrag/db /data/chatrag/faiss /data/chatrag/uploads
 sudo chmod -R 777 /data/chatrag
 
-# 应用基础资源
-kubectl apply -f k8s/namespace.yaml
+# 应用 LLMChatRAG 业务资源
+# 注意：namespace 与 redis 由 LLMBLOG 的 k8s/ 共用，不在此重复 apply
 kubectl apply -f k8s/configmap.yaml
 kubectl apply -f k8s/pvc.yaml
-kubectl apply -f k8s/redis.yaml
+kubectl apply -f k8s/backend.yaml
+kubectl apply -f k8s/celery-worker.yaml
+kubectl apply -f k8s/frontend.yaml
+kubectl apply -f k8s/ingress.yaml --validate=false
 ```
 
 后续每次提交代码，Jenkins 自动构建并滚动更新 Deployment，无需手动操作。
@@ -896,7 +954,7 @@ server {
 > }'
 > ```
 
-### 12.9 K8s 运维命令
+### 12.10 K8s 运维命令
 
 ```bash
 # Pod / Service / Deployment 状态
@@ -904,22 +962,21 @@ kubectl get pods -n app -o wide
 kubectl get svc -n app
 kubectl get deploy -n app
 
-# 查看日志
-kubectl logs -n app -l app=backend --tail=50
-kubectl logs -n app -l app=celery-worker --tail=50
+# 查看日志（LLMChatRAG 业务 Pod 加 -chatrag 后缀）
+kubectl logs -n app -l app=backend-chatrag --tail=50
+kubectl logs -n app -l app=celery-worker-chatrag --tail=50
 
 # 滚动更新后回滚
-kubectl rollout undo deployment/backend -n app
-kubectl rollout undo deployment/frontend -n app
-kubectl rollout undo deployment/celery-worker -n app
+kubectl rollout undo deployment/backend-chatrag -n app
+kubectl rollout undo deployment/frontend-chatrag -n app
+kubectl rollout undo deployment/celery-worker-chatrag -n app
 
 # 进入 Pod 调试
-kubectl exec -it deploy/backend -n app -- bash
+kubectl exec -it deploy/backend-chatrag -n app -- bash
 kubectl exec -it deploy/redis -n app -- redis-cli
 
-# 健康检查
-curl -s http://127.0.0.1:8000/health    # 容器内
-curl -s https://127.0.0.1/health -k    # 经过 Ingress
+# 健康检查（LLMChatRAG 后端）
+kubectl exec -it deploy/backend-chatrag -n app -- curl -s http://127.0.0.1:8000/health
 ```
 
 ---

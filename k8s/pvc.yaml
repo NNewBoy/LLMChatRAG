@@ -1,14 +1,14 @@
-# SQLite 数据库 / FAISS 向量 / 上传文件需要持久化
-# 裸机集群无动态 StorageClass 时，手动创建 hostPath PV 供 PVC 绑定
-# 部署前需在目标节点创建对应目录：
+# LLMChatRAG 持久化存储
+# 注意：Namespace 由 LLMBLOG 的 k8s/namespace.yaml 共用（namespace=app）
+# PV 命名加 chatrag- 前缀，hostPath 用 /data/chatrag/，避免与 LLMBLOG 的 /data/llmblog/ 冲突
+# 部署前需在 k8s-node1 创建目录：
 #   sudo mkdir -p /data/chatrag/db /data/chatrag/faiss /data/chatrag/uploads
 #   sudo chmod -R 777 /data/chatrag
-# backend/celery-worker 的 nodeSelector 已固定到 k8s-node1，确保 Pod 与 PV 在同节点
 
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: pv-backend-data
+  name: pv-chatrag-db
 spec:
   capacity:
     storage: 1Gi
@@ -27,7 +27,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: pv-faiss-data
+  name: pv-chatrag-faiss
 spec:
   capacity:
     storage: 5Gi
@@ -46,7 +46,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: pv-uploads
+  name: pv-chatrag-uploads
 spec:
   capacity:
     storage: 5Gi
@@ -63,11 +63,10 @@ spec:
     type: DirectoryOrCreate
 
 ---
-# ── PersistentVolumeClaim ──
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: backend-data
+  name: chatrag-db-data
   namespace: app
 spec:
   accessModes: ["ReadWriteOnce"]
@@ -79,7 +78,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: faiss-data
+  name: chatrag-faiss-data
   namespace: app
 spec:
   accessModes: ["ReadWriteOnce"]
@@ -91,7 +90,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: backend-uploads
+  name: chatrag-uploads
   namespace: app
 spec:
   accessModes: ["ReadWriteOnce"]

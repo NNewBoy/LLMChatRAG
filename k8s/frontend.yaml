@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: frontend-chatrag
   namespace: app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: frontend
+      app: frontend-chatrag
   template:
     metadata:
       labels:
-        app: frontend
+        app: frontend-chatrag
     spec:
       imagePullSecrets:
       - name: aliyun-acr-secret
       containers:
-      - name: frontend
-        image: crpi-v27gqzero2fjya51.cn-guangzhou.personal.cr.aliyuncs.com/chatrag/frontend:latest
+      - name: frontend-chatrag
+        image: crpi-v27gqzero2fjya51.cn-guangzhou.personal.cr.aliyuncs.com/llmproject/frontend_chatrag:latest
         ports:
         - containerPort: 80
         resources:
@@ -27,10 +27,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend
+  name: frontend-chatrag
   namespace: app
 spec:
-  selector: {app: frontend}
+  selector: {app: frontend-chatrag}
   ports:
   - port: 80
     targetPort: 80

@@ -1,29 +1,30 @@
+# LLMChatRAG 配置
+# 注意：Namespace 与 Redis 由 LLMBLOG 的 k8s/ 共用（namespace=app, Service=redis:6379）
+# Redis DB 分配：LLMBLOG 用 DB 0/1，LLMChatRAG 用 DB 2/3
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: app-config
+  name: chatrag-config
   namespace: app
 data:
   REDIS_HOST: "redis"
   REDIS_PORT: "6379"
-  CELERY_BROKER_DB: "0"
-  CELERY_BACKEND_DB: "1"
+  CELERY_BROKER_DB: "2"
+  CELERY_BACKEND_DB: "3"
   CELERY_QUEUE: "chatrag_queue"
   LOG_LEVEL: "INFO"
-  # SQLite / FAISS / 上传目录在容器内的路径
   SQLITE_DB_PATH: "./data/sqlite/chatrag.db"
   FAISS_DB_PATH: "./data/faiss/"
   AGENT_FRAMEWORK: "langchain"
   EMBEDDING_PROVIDER: "siliconflow"
-  # 前端子路径，Ingress 需与之匹配
   CORS_ORIGINS: "http://localhost,http://127.0.0.1"
 
 ---
-# 敏感配置通过 Secret 注入，避免明文落盘
 apiVersion: v1
 kind: Secret
 metadata:
-  name: app-secret
+  name: chatrag-secret
   namespace: app
 type: Opaque
 stringData:
