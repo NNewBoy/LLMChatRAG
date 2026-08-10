@@ -15,6 +15,8 @@
 - [8. 防火墙配置](#8-防火墙配置)
 - [9. SSL/HTTPS 配置（可选）](#9-sslhttps-配置可选)
 - [10. 常用运维命令](#10-常用运维命令)
+- [11. Docker Compose 部署](#11-docker-compose-部署)
+- [12. Jenkins CI/CD + K8s 部署](#12-jenkins-cicd--k8s-部署)
 - [故障排查](#故障排查)
 
 ---
@@ -24,13 +26,14 @@
 | 组件 | 版本要求 |
 |------|---------|
 | Ubuntu | 20.04 LTS 或更高版本 |
-| Python | 3.11+ |
-| Node.js | 18+ |
+| Python | 3.11+（推荐 3.12） |
+| Node.js | 18+（构建前端需要，生产环境可不装） |
+| Redis | 7+（Celery 异步任务依赖） |
 | Nginx | 1.18+ |
 | LLM API Key | DeepSeek / OpenAI 兼容模型 |
 | Embedding API Key | 硅基流动或其他 OpenAI 兼容 Embedding 服务 |
 
-> **说明**: 本项目使用 DeepAgents + LlamaIndex，后端默认端口 `8003`（可通过 `.env` 的 `PORT` 修改），前端部署在 `/llmchatrag/` 子路径。
+> **说明**: 本项目使用 DeepAgents + LlamaIndex，后端默认端口 `8003`（可通过 `.env` 的 `PORT` 修改），前端部署在 `/llmchatrag/` 子路径。微服务架构采用 Uvicorn + Gunicorn（多进程并发）+ Celery + Redis（异步任务队列），支持 Docker 容器化与 Jenkins CI/CD。
 
 ---
 
@@ -46,6 +49,15 @@ sudo apt update && sudo apt upgrade -y
 
 ```bash
 sudo apt install -y curl wget git build-essential
+```
+
+### 安装 Redis（Celery 异步任务依赖）
+
+```bash
+sudo apt install -y redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+# 验证：redis-cli ping → PONG
 ```
 
 ### 创建项目目录
@@ -412,7 +424,7 @@ sudo nano /etc/systemd/system/LLMChatRAG.service
 ```ini
 [Unit]
 Description=LLMChatRAG Backend
-After=network.target
+After=network.target redis-server.service
 
 [Service]
 Type=simple
@@ -421,7 +433,7 @@ Group=root
 WorkingDirectory=/var/LLMChatRAG/backend
 Environment="PATH=/var/LLMChatRAG/backend/venv/bin:/usr/local/bin:/usr/bin:/bin"
 EnvironmentFile=/var/LLMChatRAG/backend/.env
-ExecStart=/var/LLMChatRAG/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8003 --workers 1
+ExecStart=/var/LLMChatRAG/backend/venv/bin/gunicorn main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 127.0.0.1:8003 --timeout 120 --access-logfile - --error-logfile -
 Restart=always
 RestartSec=5
 
@@ -431,8 +443,8 @@ WantedBy=multi-user.target
 
 > **注意**:
 > - `--port 8003` 必须与 `.env` 中的 `PORT` 及 Nginx `proxy_pass` 保持一致。
-> - 生产环境不建议使用 `--reload`（仅开发用），Systemd 已提供自动重启。
-> - 使用 root 用户运行可避免文件权限问题。如需更安全配置，请创建专用用户并设置相应目录权限。
+> - 使用 Gunicorn 管理 2 个 Uvicorn Worker 实现多进程并发，生产环境不建议使用 `--reload`。
+> - 后端依赖 Redis，systemd 已配置 `After=redis-server.service` 确保启动顺序。
 
 ### 设置目录权限
 
@@ -451,15 +463,44 @@ sudo chmod -R 777 /var/LLMChatRAG/backend/logs
 # 重载 systemd 配置
 sudo systemctl daemon-reload
 
-# 启动服务
-sudo systemctl start LLMChatRAG
+# 启动后端 API 与 Celery Worker
+sudo systemctl start LLMChatRAG LLMChatRAG-celery
 
 # 设置开机自启
-sudo systemctl enable LLMChatRAG
+sudo systemctl enable LLMChatRAG LLMChatRAG-celery
 
 # 查看服务状态
 sudo systemctl status LLMChatRAG
+sudo systemctl status LLMChatRAG-celery
 ```
+
+### Celery Worker 服务（异步文档索引）
+
+```bash
+sudo nano /etc/systemd/system/LLMChatRAG-celery.service
+```
+
+```ini
+[Unit]
+Description=LLMChatRAG Celery Worker
+After=network.target redis-server.service LLMChatRAG.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/var/LLMChatRAG/backend
+Environment="PATH=/var/LLMChatRAG/backend/venv/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/var/LLMChatRAG/backend/.env
+ExecStart=/var/LLMChatRAG/backend/venv/bin/celery -A celery_app worker --loglevel=info --concurrency=1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+> **说明**: Celery Worker 负责后台执行文档索引任务（解析 → 分块 → 向量化 → 入库），避免 Gunicorn 多进程下 asyncio.create_task 任务被抢占。未启动 Worker 时，后端会回退到 asyncio.create_task，但稳定性不如 Celery。
 
 ---
 
@@ -590,6 +631,295 @@ cp -r /var/LLMChatRAG/backend/data/faiss /var/LLMChatRAG/backend/data/faiss.back
 # 每天凌晨 3 点备份数据库与向量库
 0 3 * * * cp /var/LLMChatRAG/backend/data/sqlite/chatrag.db /var/LLMChatRAG/backend/data/sqlite/chatrag.db.$(date +\%Y\%m\%d).db
 0 3 * * * cp -r /var/LLMChatRAG/backend/data/faiss /var/LLMChatRAG/backend/data/faiss.$(date +\%Y\%m\%d)
+```
+
+---
+
+## 11. Docker Compose 部署
+
+> 一键启动 backend + celery-worker + redis + nginx 四个服务，最简部署方式。
+
+### 11.1 准备环境变量
+
+```bash
+cd /var/LLMChatRAG
+cp backend/.env.example backend/.env
+# 编辑 backend/.env，填入 LLM_API_KEY / EMBEDDING_API_KEY
+# Docker 模式必须设置 REDIS_HOST=redis
+nano backend/.env
+```
+
+### 11.2 一键启动
+
+```bash
+# 构建 backend / frontend 镜像并启动所有服务
+docker compose up -d --build
+
+# 查看服务状态
+docker compose ps
+
+# 查看日志
+docker compose logs -f backend
+docker compose logs -f celery-worker
+```
+
+### 11.3 服务架构
+
+```
+用户请求 :80
+    │
+    └─ Nginx 容器（前端静态 + 反向代理）
+            ├── /llmchatrag/          → 静态文件 /var/www/llmchatrag
+            └── /llmchatrag/api/      → backend:8000
+                                          ├── Gunicorn + 2 Uvicorn Worker
+                                          └── Celery Worker 容器（异步文档索引）
+                                                  └── Redis :6379
+```
+
+### 11.4 数据持久化
+
+| 卷 | 用途 |
+|------|------|
+| `db-data` | SQLite 数据库 |
+| `faiss-data` | FAISS 向量索引 |
+| `uploads` | 上传文档 |
+| `logs` | 后端日志 |
+| `redis-data` | Redis 数据 |
+
+### 11.5 更新与维护
+
+```bash
+# 拉取最新代码后重新构建
+cd /var/LLMChatRAG
+git pull origin main
+docker compose up -d --build
+
+# 停止所有服务
+docker compose down
+
+# 停止并清除数据卷（谨慎操作）
+docker compose down -v
+```
+
+### 11.6 宿主机 Nginx 做 SSL 终止（需要 HTTPS 时）
+
+前端容器端口改为内部映射 `127.0.0.1:8080:80`，宿主机 Nginx 反代到容器：
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name your-domain.com;
+
+    ssl_certificate     /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+}
+```
+
+---
+
+## 12. Jenkins CI/CD + K8s 部署
+
+> 完整配置流程详见 `docs/JENKINS-DOCKER-GUIDE.md`。本节列出关键步骤。
+
+### 12.1 安装 Jenkins
+
+```bash
+# 安装 JDK 17
+sudo apt install -y openjdk-17-jre-headless
+
+# 安装 Jenkins LTS
+curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt update
+sudo apt install -y jenkins
+
+sudo systemctl enable jenkins
+sudo systemctl start jenkins
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+```
+
+安装必要插件：`Manage Jenkins → Plugins` → 安装 **Docker**、**Git**、**Pipeline**、**Config File Provider**。
+
+### 12.2 安装 Docker 与 kubectl（Jenkins 服务器）
+
+```bash
+# Docker（构建镜像需要）
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker jenkins
+sudo systemctl restart jenkins
+
+# kubectl（部署 K8s 需要）
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+```
+
+### 12.3 配置阿里云 ACR 镜像仓库
+
+1. 登录阿里云控制台 → 容器镜像服务 ACR → 个人版
+2. 创建命名空间（如 `chatrag`）与镜像仓库（`backend`、`frontend`）
+3. 记录镜像仓库地址，例如 `crpi-v27gqzero2fjya51.cn-guangzhou.personal.cr.aliyuncs.com`
+
+### 12.4 配置 Jenkins 凭据
+
+进入 `Manage Jenkins → Credentials → System → Global credentials`：
+
+| 凭据 ID | 类型 | 说明 |
+|---------|------|------|
+| `github-cred` | Username with password | GitHub 用户名 / Token（需 repo 权限） |
+| `aliyun-acr` | Username with password | 阿里云 ACR 账号 / 密码 |
+| `k8s-kubeconfig` | Secret File | 上传 K8s Master 的 kubeconfig 文件 |
+
+### 12.5 创建流水线项目
+
+1. Jenkins 首页 → `New Item` → 选「流水线」→ 命名 `LLMChatRAG-CICD`
+2. `Pipeline` → `Definition` → `Pipeline script from SCM`：
+   - Repository URL：`https://github.com/<你的用户名>/LLMChatRAG.git`
+   - Credentials：`github-cred`
+   - Branch：`*/main`
+   - Script Path：`Jenkinsfile`
+3. `Build Triggers` → 勾选 `Poll SCM` → `H/5 * * * *`（每 5 分钟轮询）
+4. 保存并点击「立即构建」，查看 Console Output 验证全流程
+
+### 12.6 流水线执行流程
+
+`Jenkinsfile` 定义了三个阶段：
+
+```
+拉取代码 → 构建并推送镜像（并行）→ 部署到 K8s 集群
+```
+
+| 阶段 | 动作 |
+|------|------|
+| 拉取代码 | `checkout scm` 从 GitHub main 分支拉取 |
+| 构建后端镜像 | `docker build -f backend/Dockerfile backend/` → 推送 ACR |
+| 构建前端镜像 | `docker build -f frontend/Dockerfile frontend/` → 推送 ACR |
+| 镜像标签 | `构建号-GitCommit短哈希`（每次唯一可追溯） |
+| 部署 K8s | `kubectl set image` 滚动更新 backend/frontend/celery-worker |
+| 等待完成 | `kubectl rollout status` 确认滚动更新成功 |
+
+> ARM 架构机器（如 Apple M 系列）构建时必须加 `--platform linux/amd64`，Jenkinsfile 已含此参数。
+
+### 12.7 K8s 集群一次性配置
+
+在 K8s Master 节点执行一次：
+
+```bash
+# 创建 ACR 拉取密钥
+kubectl create secret docker-registry aliyun-acr-secret \
+  --namespace=app \
+  --docker-server=crpi-v27gqzero2fjya51.cn-guangzhou.personal.cr.aliyuncs.com \
+  --docker-username=你的ACR用户名 \
+  --docker-password=ACR访问凭证固定密码
+
+# 创建数据目录（hostPath PV 需要在节点上预先创建）
+sudo mkdir -p /data/chatrag/db /data/chatrag/faiss /data/chatrag/uploads
+sudo chmod -R 777 /data/chatrag
+
+# 应用基础资源
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/pvc.yaml
+kubectl apply -f k8s/redis.yaml
+```
+
+后续每次提交代码，Jenkins 自动构建并滚动更新 Deployment，无需手动操作。
+
+### 12.8 K8s 宿主机 Nginx 配置
+
+K8s 部署完成后，宿主机 Nginx 做 SSL 终止，将请求代理到 **ingress-nginx-controller 的 NodePort**，由 Ingress 根据 Host 头路由到对应 Service。
+
+```nginx
+# HTTP → HTTPS 跳转
+server {
+    listen 80;
+    server_name your-domain.com;
+    return 301 https://$host$request_uri;
+}
+
+# SSL 终止 + 反代到 ingress-nginx NodePort
+server {
+    listen 443 ssl http2;
+    server_name your-domain.com;
+
+    ssl_certificate     /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass http://127.0.0.1:31080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+}
+```
+
+> **固定 NodePort**：
+> ```bash
+> kubectl patch svc ingress-nginx-controller -n ingress-nginx -p '{
+>   "spec": {
+>     "ports": [
+>       {"name": "http", "port": 80, "nodePort": 31080, "targetPort": 80},
+>       {"name": "https", "port": 443, "nodePort": 31443, "targetPort": 443}
+>     ]
+>   }
+> }'
+> ```
+
+### 12.9 K8s 运维命令
+
+```bash
+# Pod / Service / Deployment 状态
+kubectl get pods -n app -o wide
+kubectl get svc -n app
+kubectl get deploy -n app
+
+# 查看日志
+kubectl logs -n app -l app=backend --tail=50
+kubectl logs -n app -l app=celery-worker --tail=50
+
+# 滚动更新后回滚
+kubectl rollout undo deployment/backend -n app
+kubectl rollout undo deployment/frontend -n app
+kubectl rollout undo deployment/celery-worker -n app
+
+# 进入 Pod 调试
+kubectl exec -it deploy/backend -n app -- bash
+kubectl exec -it deploy/redis -n app -- redis-cli
+
+# 健康检查
+curl -s http://127.0.0.1:8000/health    # 容器内
+curl -s https://127.0.0.1/health -k    # 经过 Ingress
 ```
 
 ---

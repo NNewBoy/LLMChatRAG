@@ -1,0 +1,101 @@
+# SQLite 数据库 / FAISS 向量 / 上传文件需要持久化
+# 裸机集群无动态 StorageClass 时，手动创建 hostPath PV 供 PVC 绑定
+# 部署前需在目标节点创建对应目录：
+#   sudo mkdir -p /data/chatrag/db /data/chatrag/faiss /data/chatrag/uploads
+#   sudo chmod -R 777 /data/chatrag
+# backend/celery-worker 的 nodeSelector 已固定到 k8s-node1，确保 Pod 与 PV 在同节点
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-backend-data
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - {key: kubernetes.io/hostname, operator: In, values: ["k8s-node1"]}
+  hostPath:
+    path: /data/chatrag/db
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-faiss-data
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - {key: kubernetes.io/hostname, operator: In, values: ["k8s-node1"]}
+  hostPath:
+    path: /data/chatrag/faiss
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-uploads
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - {key: kubernetes.io/hostname, operator: In, values: ["k8s-node1"]}
+  hostPath:
+    path: /data/chatrag/uploads
+    type: DirectoryOrCreate
+
+---
+# ── PersistentVolumeClaim ──
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-data
+  namespace: app
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: manual
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: faiss-data
+  namespace: app
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: manual
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-uploads
+  namespace: app
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: manual
+  resources:
+    requests:
+      storage: 5Gi

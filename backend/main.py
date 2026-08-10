@@ -1,4 +1,8 @@
-"""FastAPI 入口，启动服务"""
+"""FastAPI 入口
+
+本地开发：uvicorn main:app --reload --host 0.0.0.0 --port 8000
+生产启动：gunicorn main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --timeout 120
+"""
 
 import sys
 import os
@@ -7,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# 确保项目根目录在 Python 路径中
+# 确保项目根目录在 Python 路径中（Celery Worker / Gunicorn 启动时需要）
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config import settings
@@ -19,14 +23,12 @@ from utils.logger import logger
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
-    # 启动前
     logger.info("正在初始化应用...")
     settings.ensure_dirs()
     await init_db()
     logger.info(f"数据库初始化完成: {settings.sqlite_db_path}")
     logger.info(f"服务启动: http://{settings.host}:{settings.port}")
     yield
-    # 关闭时
     logger.info("应用关闭")
 
 
@@ -37,10 +39,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS 配置
+# CORS 配置：支持从环境变量读取多个来源（逗号分隔），默认放宽便于本地调试
+_cors = os.environ.get("CORS_ORIGINS", "*")
+_cors_origins = [o.strip() for o in _cors.split(",") if o.strip()] if _cors != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境应限制为前端域名
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

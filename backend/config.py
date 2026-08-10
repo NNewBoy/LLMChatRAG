@@ -59,11 +59,27 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_file: str = "./logs/app.log"
 
+    # Redis / Celery 配置（容器内服务名为 redis，本地开发改为 127.0.0.1）
+    redis_host: str = "127.0.0.1"
+    redis_port: int = 6379
+    celery_broker_db: int = 0
+    celery_backend_db: int = 1
+    # 异步任务队列名，API 与 Worker 共用
+    celery_queue: str = "chatrag_queue"
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "extra": "ignore",
     }
+
+    @property
+    def celery_broker_url(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.celery_broker_db}"
+
+    @property
+    def celery_backend_url(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.celery_backend_db}"
 
     def get_bad_case_db_path(self) -> str:
         """获取错题集数据库路径，为空则使用主库"""

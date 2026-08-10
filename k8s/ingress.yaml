@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  namespace: app
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # 重试与超时（适配 SSE 长连接 + 容错）
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    # 宿主机 Nginx → Ingress NodePort 时保留真实 Host 头
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  # 替换为你的域名
+  - host: www.your-domain.com
+    http:
+      paths:
+      # 前端子路径 /llmchatrag/ → frontend 容器
+      - path: /llmchatrag
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port: {number: 80}
+      # API 子路径 /llmchatrag/api → backend 容器
+      - path: /llmchatrag/api
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port: {number: 8000}
+      # 健康探针
+      - path: /health
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port: {number: 8000}

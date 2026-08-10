@@ -1,0 +1,63 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_DB=0
+      - CELERY_BACKEND_DB=1
+    volumes:
+      - db-data:/app/data
+      - uploads:/app/data/uploads
+      - faiss-data:/app/data/faiss
+      - logs:/app/logs
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  celery-worker:
+    build:
+      context: ./backend
+    command: ["celery", "-A", "celery_app", "worker", "--loglevel=info", "--concurrency=1"]
+    env_file:
+      - ./backend/.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_DB=0
+      - CELERY_BACKEND_DB=1
+    volumes:
+      - db-data:/app/data
+      - uploads:/app/data/uploads
+      - faiss-data:/app/data/faiss
+      - logs:/app/logs
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  uploads:
+  faiss-data:
+  logs:
+  redis-data:

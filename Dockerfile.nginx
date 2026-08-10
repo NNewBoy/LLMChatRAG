@@ -1,0 +1,16 @@
+# 合并构建模式：单容器同时托管前后端（不采用微服务拆分时使用）
+# ── Stage 1: 构建前端 ──────────────────────────
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --registry=https://registry.npmmirror.com
+COPY frontend/ ./
+RUN npm run build
+
+# ── Stage 2: Nginx 托管 ────────────────────────
+FROM nginx:alpine
+COPY --from=build /app/dist /var/www/llmchatrag
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+# Docker 网络中后端服务名为 backend
+RUN sed -i 's/127\.0\.0\.1:8003/backend:8000/' /etc/nginx/conf.d/default.conf
+EXPOSE 80

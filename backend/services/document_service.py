@@ -41,8 +41,18 @@ class DocumentService:
         return str(file_path)
 
     async def process_document(self, doc_id: str, file_path: str, filename: str):
-        """异步处理文档: 解析 → 分块 → 向量化 → 存储"""
-        asyncio.create_task(self._process_document(doc_id, file_path, filename))
+        """异步处理文档: 解析 → 分块 → 向量化 → 存储
+
+        优先使用 Celery 后台任务（适配 Gunicorn 多进程）；
+        若 Celery/Redis 不可用则回退到 asyncio.create_task。
+        """
+        try:
+            from tasks import index_document as _index_task
+            _index_task.delay(doc_id, file_path, filename)
+            logger.info(f"已提交 Celery 文档索引任务: {filename} (id={doc_id})")
+        except Exception as e:
+            logger.warning(f"Celery 不可用，回退 asyncio 后台任务: {e}")
+            asyncio.create_task(self._process_document(doc_id, file_path, filename))
 
     def delete_document_vectors(self, doc_id: str):
         """删除文档在 FAISS 中的向量数据"""

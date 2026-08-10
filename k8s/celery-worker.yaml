@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery-worker
+  template:
+    metadata:
+      labels:
+        app: celery-worker
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-node1   # 固定到有 PV 数据的节点（SQLite hostPath 不可跨节点共享）
+      imagePullSecrets:
+      - name: aliyun-acr-secret
+      containers:
+      - name: worker
+        image: crpi-v27gqzero2fjya51.cn-guangzhou.personal.cr.aliyuncs.com/chatrag/backend:latest
+        command: ["celery"]
+        args: ["-A", "celery_app", "worker", "--loglevel=info", "--concurrency=1"]
+        envFrom:
+        - configMapRef: {name: app-config}
+        - secretRef: {name: app-secret}
+        resources:
+          requests: {cpu: 200m, memory: 256Mi}
+          limits: {cpu: 500m, memory: 512Mi}
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+        - name: faiss
+          mountPath: /app/data/faiss
+        - name: uploads
+          mountPath: /app/data/uploads
+      volumes:
+      - name: data
+        persistentVolumeClaim: {claimName: backend-data}
+      - name: faiss
+        persistentVolumeClaim: {claimName: faiss-data}
+      - name: uploads
+        persistentVolumeClaim: {claimName: backend-uploads}

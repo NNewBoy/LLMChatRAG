@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/*.db
+**/*.db-wal
+**/*.db-shm
+.git
+.vscode
+.idea
+*.log
+backend/data
+backend/logs
