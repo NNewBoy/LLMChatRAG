@@ -9,6 +9,8 @@ spec:
     matchLabels:
       app: celery-worker-chatrag
   progressDeadlineSeconds: 600
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
