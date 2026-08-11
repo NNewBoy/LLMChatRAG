@@ -10,7 +10,13 @@ Docker / K8s：
 """
 
 import os
+import sys
+from pathlib import Path
 from celery import Celery
+
+# 确保项目根目录在 Python 路径中（与 main.py 保持一致）
+# Celery Worker 启动时需要，否则 tasks.py 内部 import models 等包会失败
+sys.path.insert(0, str(Path(__file__).parent))
 
 from config import settings
 
