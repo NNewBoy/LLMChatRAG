@@ -791,6 +791,8 @@ sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 | `github-cred` | Username with password | GitHub 用户名 / Token（需 repo 权限） |
 | `aliyun-acr` | Username with password | 阿里云 ACR 账号 / 密码 |
 | `k8s-kubeconfig` | Secret File | 上传 K8s Master 的 kubeconfig 文件 |
+| `opencode-api-key` | Secret Text | DeepSeek LLM API Key |
+| `siliconflow-api-key` | Secret Text | 硅基流动 Embedding API Key |
 
 ### 12.5 创建流水线项目
 
@@ -905,14 +907,14 @@ kubectl apply -f k8s/ingress.yaml --validate=false
 
 ### 12.9 更新 K8s Secret（API Key 等敏感配置）
 
-> **重要**：`k8s/secret.yaml` 含 API Key 等敏感信息，已加入 `.gitignore`，**不通过 Jenkins apply**（避免 Git 中的占位符覆盖集群真实值）。需手动更新。
+> **重要**：`k8s/secret.yaml` 含 API Key 等敏感信息，已加入 `.gitignore`，**不通过 yaml apply**（避免 Git 中的占位符覆盖集群真实值）。Jenkinsfile 已集成「更新 K8s Secret」阶段，每次构建自动从 Jenkins Credentials 注入。
 
-#### 方式一：手动命令更新（推荐，简单直接）
+#### 方式一：手动命令更新（首次部署或临时更换 Key）
 
 在 K8s Master 节点执行：
 
 ```bash
-# 方法 A：用 kubectl create --dry-run 生成并应用（推荐，无需手动 base64 编码）
+# 用 kubectl create --dry-run 生成并应用（无需手动 base64 编码）
 kubectl create secret generic chatrag-secret \
   --namespace=app \
   --from-literal=LLM_API_KEY="sk-你的真实DeepSeek密钥" \
@@ -923,62 +925,35 @@ kubectl create secret generic chatrag-secret \
   --from-literal=EMBEDDING_MODEL="BAAI/bge-large-zh-v1.5" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# 方法 B：编辑本地 k8s/secret.yaml 填入真实值后 apply
-nano k8s/secret.yaml           # 把 sk-xxxxxxxx 替换为真实 API Key
-kubectl apply -f k8s/secret.yaml
-
-# 更新后重启 backend 与 celery-worker 使新 Secret 生效
+# 更新后重启 Pod 使新 Secret 生效
 kubectl rollout restart deployment/backend-chatrag -n app
 kubectl rollout restart deployment/celery-worker-chatrag -n app
 ```
 
-#### 方式二：通过 Jenkins Credentials 注入（适合团队协作）
+#### 方式二：通过 Jenkins Credentials 自动注入（推荐，已集成到 Jenkinsfile）
 
-1. 在 Jenkins `Manage Jenkins → Credentials` 添加以下 Secret Text 凭据：
+Jenkinsfile 已含「更新 K8s Secret」阶段，每次构建自动执行——只需在 Jenkins 配置好凭据即可。
 
-| 凭据 ID | 说明 |
-|---------|------|
-| `chatrag-llm-api-key` | DeepSeek API Key |
-| `chatrag-embedding-api-key` | 硅基流动 Embedding API Key |
+**前提条件**：已在 §12.4 中配置以下 Jenkins 凭据：
 
-2. 在 Jenkinsfile 的部署阶段追加 Secret 更新步骤（示例）：
+| 凭据 ID | 类型 | 说明 |
+|---------|------|------|
+| `opencode-api-key` | Secret Text | DeepSeek LLM API Key |
+| `siliconflow-api-key` | Secret Text | 硅基流动 Embedding API Key |
 
-```groovy
-stage('更新 K8s Secret') {
-    steps {
-        withCredentials([
-            string(credentialsId: 'chatrag-llm-api-key', variable: 'LLM_API_KEY'),
-            string(credentialsId: 'chatrag-embedding-api-key', variable: 'EMBEDDING_API_KEY'),
-        ]) {
-            sh """
-                export KUBECONFIG=\$KUBECONFIG
-                kubectl create secret generic chatrag-secret \\
-                  --namespace=app \\
-                  --from-literal=LLM_API_KEY=\$LLM_API_KEY \\
-                  --from-literal=LLM_API_BASE_URL="https://api.deepseek.com/v1" \\
-                  --from-literal=LLM_MODEL="deepseek-chat" \\
-                  --from-literal=EMBEDDING_API_KEY=\$EMBEDDING_API_KEY \\
-                  --from-literal=EMBEDDING_API_BASE_URL="https://api.siliconflow.cn/v1" \\
-                  --from-literal=EMBEDDING_MODEL="BAAI/bge-large-zh-v1.5" \\
-                  --dry-run=client -o yaml | kubectl apply -f -
-            """
-        }
-    }
-}
+**Jenkinsfile 执行流程**：
+
+```
+拉取代码 → 构建并推送镜像 → 更新 K8s Secret → 部署到 K8s 集群
+                                        ↓
+                         从 Jenkins Credentials 读取 API Key
+                                        ↓
+                         kubectl create secret --dry-run | kubectl apply
+                                        ↓
+                         后续滚动更新 Pod 自动读取最新 Secret
 ```
 
-> **注意**：方式二将 Secret 更新阶段放在「部署到 K8s 集群」阶段之前，确保 Pod 滚动更新时能读取到最新的 Secret。
-
-#### 验证 Secret 是否生效
-
-```bash
-# 查看 Secret（值已 base64 编码，不会明文显示）
-kubectl get secret chatrag-secret -n app -o jsonpath='{.data.LLM_API_KEY}' | base64 -d | head -c 10
-echo "..."   # 只显示前 10 个字符确认非占位符
-
-# 进入 Pod 验证环境变量
-kubectl exec -it deploy/backend-chatrag -n app -- env | grep LLM_API_KEY
-```
+**更换 API Key 时**：只需在 Jenkins `Manage Jenkins → Credentials` 中更新凭据值，下次构建自动生效，无需手动操作 K8s。
 
 ### 12.10 K8s 宿主机 Nginx 配置
 

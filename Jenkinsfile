@@ -46,6 +46,31 @@ pipeline {
             }
         }
 
+        stage('更新 K8s Secret') {
+            steps {
+                withCredentials([
+                    file(credentialsId: 'k8s-kubeconfig', variable: 'KUBECONFIG'),
+                    string(credentialsId: 'opencode-api-key', variable: 'LLM_API_KEY'),
+                    string(credentialsId: 'siliconflow-api-key', variable: 'EMBEDDING_API_KEY'),
+                ]) {
+                    sh """
+                        export KUBECONFIG=\$KUBECONFIG
+                        # 从 Jenkins Credentials 注入 API Key 到 K8s Secret
+                        # 非敏感固定值（URL/Model）直接写在命令中，仅 API Key 从凭据读取
+                        kubectl create secret generic chatrag-secret \\
+                          --namespace=${K8S_NAMESPACE} \\
+                          --from-literal=LLM_API_KEY=\$LLM_API_KEY \\
+                          --from-literal=LLM_API_BASE_URL="https://opencode.ai/zen/go/v1" \\
+                          --from-literal=LLM_MODEL="deepseek-v4-flash" \\
+                          --from-literal=EMBEDDING_API_KEY=\$EMBEDDING_API_KEY \\
+                          --from-literal=EMBEDDING_API_BASE_URL="https://api.siliconflow.cn/v1" \\
+                          --from-literal=EMBEDDING_MODEL="BAAI/bge-m3" \\
+                          --dry-run=client -o yaml | kubectl apply -f -
+                    """
+                }
+            }
+        }
+
         stage('部署到 K8s 集群') {
             steps {
                 withCredentials([file(credentialsId: 'k8s-kubeconfig', variable: 'KUBECONFIG')]) {
@@ -53,8 +78,7 @@ pipeline {
                         export KUBECONFIG=\$KUBECONFIG
                         # 1. 应用本地业务资源（首次部署需要，幂等操作）
                         #    注意：namespace 与 redis 由 LLMBLOG 的 k8s/ 共用，不在此重复 apply
-                        #    注意：secret.yaml 含敏感 API Key，不通过 Jenkins apply（避免占位符覆盖真实值）
-                        #          Secret 更新方式见 DEPLOY_UBUNTU.md §12.8
+                        #    注意：Secret 由上一阶段从 Jenkins Credentials 注入，不通过 yaml apply
                         kubectl apply -f k8s/configmap.yaml
                         kubectl apply -f k8s/pvc.yaml
                         # 2. 先 apply Deployment/Service（不存在则创建，存在则更新）
