@@ -14,17 +14,18 @@ spec:
   - host: www.newboy.ren
     http:
       paths:
-      # 前端子路径 /llmchatrag/ → frontend-chatrag
+      # API 子路径 → frontend-chatrag（由前端 Nginx rewrite 去前缀后代理到 backend-chatrag）
+      # 必须在 /llmchatrag 之前，Ingress 按最长前缀优先匹配
+      - path: /llmchatrag/api
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-chatrag
+            port: {number: 80}
+      # 前端子路径 /llmchatrag → frontend-chatrag
       - path: /llmchatrag
         pathType: Prefix
         backend:
           service:
             name: frontend-chatrag
             port: {number: 80}
-      # API 子路径 /llmchatrag/api → backend-chatrag
-      - path: /llmchatrag/api
-        pathType: Prefix
-        backend:
-          service:
-            name: backend-chatrag
-            port: {number: 8000}
