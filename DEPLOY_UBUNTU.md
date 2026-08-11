@@ -492,7 +492,7 @@ Group=root
 WorkingDirectory=/var/LLMChatRAG/backend
 Environment="PATH=/var/LLMChatRAG/backend/venv/bin:/usr/local/bin:/usr/bin:/bin"
 EnvironmentFile=/var/LLMChatRAG/backend/.env
-ExecStart=/var/LLMChatRAG/backend/venv/bin/celery -A celery_app worker --loglevel=info --concurrency=1
+ExecStart=/var/LLMChatRAG/backend/venv/bin/celery -A celery_app worker --loglevel=info --concurrency=1 --queues=chatrag_queue
 Restart=always
 RestartSec=5
 

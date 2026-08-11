@@ -24,7 +24,7 @@ spec:
       - name: worker
         image: crpi-v27gqzero2fjya51.cn-guangzhou.personal.cr.aliyuncs.com/llmproject/backend_chatrag:latest
         command: ["celery"]
-        args: ["-A", "celery_app", "worker", "--loglevel=info", "--concurrency=1"]
+        args: ["-A", "celery_app", "worker", "--loglevel=info", "--concurrency=1", "--queues=chatrag_queue"]
         envFrom:
         - configMapRef: {name: chatrag-config}
         - secretRef: {name: chatrag-secret}

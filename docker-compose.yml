@@ -21,7 +21,7 @@ services:
   celery-worker:
     build:
       context: ./backend
-    command: ["celery", "-A", "celery_app", "worker", "--loglevel=info", "--concurrency=1"]
+    command: ["celery", "-A", "celery_app", "worker", "--loglevel=info", "--concurrency=1", "--queues=chatrag_queue"]
     env_file:
       - ./backend/.env
     environment:
