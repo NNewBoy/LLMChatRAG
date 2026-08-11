@@ -11,11 +11,11 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
+  # www.newboy.ren
   - host: www.newboy.ren
     http:
       paths:
       # API 子路径 → frontend-chatrag（由前端 Nginx rewrite 去前缀后代理到 backend-chatrag）
-      # 必须在 /llmchatrag 之前，Ingress 按最长前缀优先匹配
       - path: /llmchatrag/api
         pathType: Prefix
         backend:
@@ -23,6 +23,22 @@ spec:
             name: frontend-chatrag
             port: {number: 80}
       # 前端子路径 /llmchatrag → frontend-chatrag
+      - path: /llmchatrag
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-chatrag
+            port: {number: 80}
+  # newboy.ren（无 www）
+  - host: newboy.ren
+    http:
+      paths:
+      - path: /llmchatrag/api
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-chatrag
+            port: {number: 80}
       - path: /llmchatrag
         pathType: Prefix
         backend:

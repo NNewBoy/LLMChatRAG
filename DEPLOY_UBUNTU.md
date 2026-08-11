@@ -708,16 +708,16 @@ docker compose down -v
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name newboy.ren www.newboy.ren;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name your-domain.com;
+    server_name newboy.ren www.newboy.ren;
 
-    ssl_certificate     /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/newboy.ren/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/newboy.ren/privkey.pem;
 
     client_max_body_size 10M;
 
@@ -960,20 +960,20 @@ Jenkinsfile 已含「更新 K8s Secret」阶段，每次构建自动执行——
 K8s 部署完成后，宿主机 Nginx 做 SSL 终止，将请求代理到 **ingress-nginx-controller 的 NodePort**，由 Ingress 根据 Host 头路由到对应 Service。
 
 ```nginx
-# HTTP → HTTPS 跳转
+# HTTP → HTTPS 跳转（兼容 www 和无 www）
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name newboy.ren www.newboy.ren;
     return 301 https://$host$request_uri;
 }
 
-# SSL 终止 + 反代到 ingress-nginx NodePort
+# SSL 终止 + 反代到 ingress-nginx NodePort（兼容 www 和无 www）
 server {
     listen 443 ssl http2;
-    server_name your-domain.com;
+    server_name newboy.ren www.newboy.ren;
 
-    ssl_certificate     /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/newboy.ren/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/newboy.ren/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
@@ -993,6 +993,11 @@ server {
     }
 }
 ```
+
+> **SSL 证书**：需同时覆盖 `newboy.ren` 和 `www.newboy.ren`，Let's Encrypt 申请时加 `-d newboy.ren -d www.newboy.ren`：
+> ```bash
+> certbot certonly --nginx -d newboy.ren -d www.newboy.ren
+> ```
 
 > **固定 NodePort**：
 > ```bash
@@ -1199,7 +1204,7 @@ sudo -E npx -y bing-cn-mcp --help
 - [ ] Systemd 服务已创建并启动
 - [ ] 防火墙已配置
 - [ ] 服务已设置开机自启
-- [ ] 浏览器可以正常访问 `http://your-domain.com/llmchatrag/`
+- [ ] 浏览器可以正常访问 `https://www.newboy.ren/llmchatrag/`
 - [ ] 对话流式输出正常（思考过程实时显示）
 
 ---
