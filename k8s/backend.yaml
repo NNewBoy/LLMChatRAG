@@ -8,6 +8,7 @@ spec:
   selector:
     matchLabels:
       app: backend-chatrag
+  progressDeadlineSeconds: 600   # 滚动更新超过 10 分钟才判定失败
   strategy:
     type: RollingUpdate
     rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
@@ -28,17 +29,23 @@ spec:
         envFrom:
         - configMapRef: {name: chatrag-config}
         - secretRef: {name: chatrag-secret}
+        # startupProbe：给慢启动容器充足时间（llama_index + faiss 导入可能需要 60s+）
+        # 在 startupProbe 成功之前，liveness/readiness Probe 不会执行
+        startupProbe:
+          httpGet: {path: /health, port: 8000}
+          failureThreshold: 30   # 30 次 × 10s = 最多等 5 分钟
+          periodSeconds: 10
         livenessProbe:
           httpGet: {path: /health, port: 8000}
-          initialDelaySeconds: 30
           periodSeconds: 30
+          failureThreshold: 3
         readinessProbe:
           httpGet: {path: /health, port: 8000}
-          initialDelaySeconds: 10
           periodSeconds: 10
+          failureThreshold: 3
         resources:
-          requests: {cpu: 200m, memory: 512Mi}
-          limits: {cpu: 1000m, memory: 1Gi}
+          requests: {cpu: 300m, memory: 512Mi}
+          limits: {cpu: 2000m, memory: 2Gi}
         volumeMounts:
         - name: data
           mountPath: /app/data
