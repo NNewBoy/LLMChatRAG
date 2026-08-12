@@ -24,7 +24,7 @@ EXPOSE 8000
 # Gunicorn 管理 2 个 Uvicorn Worker，实现多进程并发
 # 对话接口使用 SSE，--timeout 设大避免长连接被中断
 CMD ["gunicorn", "main:app", \
-     "--workers", "2", \
+     "--workers", "1", \
      "--worker-class", "uvicorn.workers.UvicornWorker", \
      "--bind", "0.0.0.0:8000", \
      "--timeout", "120", \
